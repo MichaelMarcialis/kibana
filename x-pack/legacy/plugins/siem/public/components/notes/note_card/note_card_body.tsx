@@ -20,29 +20,13 @@ const BodyContainer = styled(EuiPanel)`
 
 BodyContainer.displayName = 'BodyContainer';
 
-const HoverActionsContainer = styled(EuiPanel)`
-  align-items: center;
-  display: flex;
-  flex-direction: row;
-  height: 25px;
-  justify-content: center;
-  left: 5px;
-  position: absolute;
-  top: -5px;
-  width: 30px;
-`;
-
-HoverActionsContainer.displayName = 'HoverActionsContainer';
-
 export const NoteCardBody = pure<{ rawNote: string }>(({ rawNote }) => (
   <BodyContainer data-test-subj="note-card-body" hasShadow={false} paddingSize="s">
     <WithHoverActions
       hoverContent={
-        <HoverActionsContainer data-test-subj="hover-actions-container">
-          <EuiToolTip content={i18n.COPY_TO_CLIPBOARD}>
-            <WithCopyToClipboard text={rawNote} titleSummary={i18n.NOTE.toLowerCase()} />
-          </EuiToolTip>
-        </HoverActionsContainer>
+        <EuiToolTip content={i18n.COPY_TO_CLIPBOARD}>
+          <WithCopyToClipboard text={rawNote} titleSummary={i18n.NOTE.toLowerCase()} />
+        </EuiToolTip>
       }
       render={() => <Markdown raw={rawNote} />}
     />

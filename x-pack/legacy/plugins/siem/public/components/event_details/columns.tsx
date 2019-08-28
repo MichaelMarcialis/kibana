@@ -40,20 +40,6 @@ import { DATE_FIELD_TYPE, MESSAGE_FIELD_NAME } from '../timeline/body/renderers/
 import { EVENT_DURATION_FIELD_NAME } from '../duration';
 import { EventFieldsData } from './types';
 
-const HoverActionsContainer = styled(EuiPanel)`
-  align-items: center;
-  display: flex;
-  flex-direction: row;
-  height: 25px;
-  justify-content: center;
-  left: 5px;
-  position: absolute;
-  top: -10px;
-  width: 30px;
-`;
-
-HoverActionsContainer.displayName = 'HoverActionsContainer';
-
 const FieldTypeIcon = styled(EuiIcon)`
   position: relative;
   top: -2px;
@@ -175,11 +161,9 @@ export const getColumns = ({
             >
               <WithHoverActions
                 hoverContent={
-                  <HoverActionsContainer data-test-subj="hover-actions-container">
-                    <EuiToolTip content={i18n.COPY_TO_CLIPBOARD}>
-                      <WithCopyToClipboard text={value} titleSummary={i18n.VALUE.toLowerCase()} />
-                    </EuiToolTip>
-                  </HoverActionsContainer>
+                  <EuiToolTip content={i18n.COPY_TO_CLIPBOARD}>
+                    <WithCopyToClipboard text={value} titleSummary={i18n.VALUE.toLowerCase()} />
+                  </EuiToolTip>
                 }
                 render={() =>
                   data.field === MESSAGE_FIELD_NAME ? (

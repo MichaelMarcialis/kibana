@@ -32,11 +32,9 @@ class AddToKqlComponent extends React.PureComponent<Props> {
     return (
       <WithHoverActions
         hoverContent={
-          <HoverActionsContainer data-test-subj="hover-actions-container">
-            <EuiToolTip content={i18n.FILTER_FOR_VALUE}>
-              <EuiIcon type="filter" onClick={this.addToKql} />
-            </EuiToolTip>
-          </HoverActionsContainer>
+          <EuiToolTip content={i18n.FILTER_FOR_VALUE}>
+            <EuiIcon type="filter" onClick={this.addToKql} />
+          </EuiToolTip>
         }
         render={() => children}
       />
@@ -52,21 +50,6 @@ class AddToKqlComponent extends React.PureComponent<Props> {
     );
   };
 }
-
-const HoverActionsContainer = styled(EuiPanel)`
-  align-items: center;
-  display: flex;
-  flex-direction: row;
-  height: 25px;
-  justify-content: center;
-  left: 5px;
-  position: absolute;
-  top: -10px;
-  width: 30px;
-  cursor: pointer;
-`;
-
-HoverActionsContainer.displayName = 'HoverActionsContainer';
 
 interface AddToKqlProps {
   children: JSX.Element;

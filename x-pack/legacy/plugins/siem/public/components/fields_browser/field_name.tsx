@@ -40,24 +40,6 @@ export const FieldNameContainer = styled.span`
 
 FieldNameContainer.displayName = 'FieldNameContainer';
 
-const HoverActionsContainer = styled(EuiPanel)`
-  cursor: default;
-  height: 25px;
-  left: 5px;
-  position: absolute;
-  top: 3px;
-`;
-
-HoverActionsContainer.displayName = 'HoverActionsContainer';
-
-const HoverActionsFlexGroup = styled(EuiFlexGroup)`
-  cursor: pointer;
-  position: relative;
-  top: -8px;
-`;
-
-HoverActionsFlexGroup.displayName = 'HoverActionsFlexGroup';
-
 const ViewCategoryIcon = styled(EuiIcon)`
   margin-left: 5px;
 `;
@@ -103,34 +85,23 @@ export const FieldName = React.memo<{
 }>(({ categoryId, categoryColumns, fieldId, highlight = '', onUpdateColumns }) => (
   <WithHoverActions
     hoverContent={
-      <HoverActionsContainer data-test-subj="hover-actions-container" paddingSize="s">
-        <HoverActionsFlexGroup
-          alignItems="center"
-          direction="row"
-          gutterSize="none"
-          justifyContent="spaceBetween"
-        >
-          <EuiFlexItem grow={false}>
-            <EuiToolTip content={i18n.COPY_TO_CLIPBOARD}>
-              <WithCopyToClipboard
-                data-test-subj="copy-to-clipboard"
-                text={fieldId}
-                titleSummary={i18n.FIELD}
-              />
-            </EuiToolTip>
-          </EuiFlexItem>
+      <>
+        <EuiToolTip content={i18n.COPY_TO_CLIPBOARD}>
+          <WithCopyToClipboard
+            data-test-subj="copy-to-clipboard"
+            text={fieldId}
+            titleSummary={i18n.FIELD}
+          />
+        </EuiToolTip>
 
-          {categoryColumns.length > 0 && (
-            <EuiFlexItem grow={false}>
-              <ToolTip
-                categoryId={categoryId}
-                categoryColumns={categoryColumns}
-                onUpdateColumns={onUpdateColumns}
-              />
-            </EuiFlexItem>
-          )}
-        </HoverActionsFlexGroup>
-      </HoverActionsContainer>
+        {categoryColumns.length > 0 && (
+          <ToolTip
+            categoryId={categoryId}
+            categoryColumns={categoryColumns}
+            onUpdateColumns={onUpdateColumns}
+          />
+        )}
+      </>
     }
     render={() => (
       <FieldNameContainer>
