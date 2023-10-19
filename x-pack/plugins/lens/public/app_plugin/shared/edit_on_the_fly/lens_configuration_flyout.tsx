@@ -9,7 +9,15 @@ import React, { useMemo, useCallback, useRef, useEffect, useState } from 'react'
 import { isEqual } from 'lodash';
 import { css } from '@emotion/react';
 import { i18n } from '@kbn/i18n';
-import { EuiTitle, EuiAccordion, useEuiTheme, EuiCallOut, EuiSpacer } from '@elastic/eui';
+import {
+  EuiTitle,
+  EuiAccordion,
+  useEuiTheme,
+  EuiCallOut,
+  EuiSpacer,
+  EuiFlexGroup,
+  EuiFlexItem,
+} from '@elastic/eui';
 import type { Datatable } from '@kbn/expressions-plugin/public';
 import { isOfAggregateQueryType } from '@kbn/es-query';
 import type { AggregateQuery, Query } from '@kbn/es-query';
@@ -206,6 +214,11 @@ export function LensEditConfigurationFlyout({
     };
     return selectFramePublicAPI(newState, datasourceMap);
   });
+
+  const onToggle = (isOpen) => {
+    console.log('it worked');
+  };
+
   if (isLoading) return null;
   // Example is the Discover editing where we dont want to render the text based editor on the panel
   if (!canEditTextBasedQuery) {
@@ -242,32 +255,50 @@ export function LensEditConfigurationFlyout({
         navigateToLensEditor={navigateToLensEditor}
         onApply={onApply}
       >
-        <>
+        <EuiFlexGroup
+          css={css`
+            block-size: 100%;
+          `}
+          direction="column"
+          gutterSize="none"
+        >
           {isOfAggregateQueryType(query) && (
-            <TextBasedLangEditor
-              query={query}
-              onTextLangQueryChange={(q) => {
-                setQuery(q);
-                prevQuery.current = q;
-              }}
-              expandCodeEditor={(status: boolean) => {}}
-              isCodeEditorExpanded
-              detectTimestamp={Boolean(adHocDataViews?.[0]?.timeFieldName)}
-              errors={errors}
-              hideMinimizeButton
-              editorIsInline
-              hideRunQueryText
-              disableSubmitAction={isEqual(query, prevQuery.current)}
-              onTextLangQuerySubmit={(q) => {
-                if (q) {
-                  runQuery(q);
-                }
-              }}
-              isDisabled={false}
-            />
+            <EuiFlexItem
+              css={css`
+                background: blue;
+              `}
+              grow={false}
+            >
+              <TextBasedLangEditor
+                query={query}
+                onTextLangQueryChange={(q) => {
+                  setQuery(q);
+                  prevQuery.current = q;
+                }}
+                expandCodeEditor={(status: boolean) => {}}
+                isCodeEditorExpanded
+                detectTimestamp={Boolean(adHocDataViews?.[0]?.timeFieldName)}
+                errors={errors}
+                hideMinimizeButton
+                editorIsInline
+                hideRunQueryText
+                disableSubmitAction={isEqual(query, prevQuery.current)}
+                onTextLangQuerySubmit={(q) => {
+                  if (q) {
+                    runQuery(q);
+                  }
+                }}
+                isDisabled={false}
+              />
+            </EuiFlexItem>
           )}
           {displayCallout && (
-            <>
+            <EuiFlexItem
+              css={css`
+                background: red;
+              `}
+              grow={false}
+            >
               <EuiSpacer size="s" />
               <EuiCallOut
                 size="s"
@@ -278,57 +309,72 @@ export function LensEditConfigurationFlyout({
                 iconType="iInCircle"
               />
               <EuiSpacer size="s" />
-            </>
+            </EuiFlexItem>
           )}
-          <EuiAccordion
-            id="layer-configuration"
-            buttonContent={
-              <EuiTitle size="xxs">
-                <h5>
-                  {i18n.translate('xpack.lens.config.layerConfigurationLabel', {
-                    defaultMessage: 'Layer configuration',
-                  })}
-                </h5>
-              </EuiTitle>
-            }
-            initialIsOpen={true}
+          <EuiFlexItem
             css={css`
-              padding: ${euiTheme.size.s};
-              border-bottom: ${euiTheme.border.thin};
-              // styles needed to display extra drop targets that are outside of the config panel main area
-              .euiAccordion__childWrapper {
-                overflow: inherit;
+              background: green;
+            `}
+            grow={false}
+          >
+            <EuiAccordion
+              id="layer-configuration"
+              buttonContent={
+                <EuiTitle size="xxs">
+                  <h5>
+                    {i18n.translate('xpack.lens.config.layerConfigurationLabel', {
+                      defaultMessage: 'Layer configuration',
+                    })}
+                  </h5>
+                </EuiTitle>
               }
-            `}
-          >
-            <LayerConfiguration
-              attributes={attributes}
-              coreStart={coreStart}
-              startDependencies={startDependencies}
-              visualizationMap={visualizationMap}
-              datasourceMap={datasourceMap}
-              datasourceId={datasourceId}
-              framePublicAPI={framePublicAPI}
-              setIsInlineFlyoutFooterVisible={setIsInlineFlyoutFooterVisible}
-            />
-          </EuiAccordion>
-          <div
+              initialIsOpen={true}
+              css={css`
+                padding: ${euiTheme.size.s};
+                border-bottom: ${euiTheme.border.thin};
+                // styles needed to display extra drop targets that are outside of the config panel main area
+                .euiAccordion__childWrapper {
+                  overflow: inherit;
+                }
+              `}
+              onToggle={onToggle}
+            >
+              <LayerConfiguration
+                attributes={attributes}
+                coreStart={coreStart}
+                startDependencies={startDependencies}
+                visualizationMap={visualizationMap}
+                datasourceMap={datasourceMap}
+                datasourceId={datasourceId}
+                framePublicAPI={framePublicAPI}
+                setIsInlineFlyoutFooterVisible={setIsInlineFlyoutFooterVisible}
+              />
+            </EuiAccordion>
+          </EuiFlexItem>
+          <EuiFlexItem
             css={css`
-              padding: ${euiTheme.size.s};
+              background: yellow;
             `}
+            grow={false}
           >
-            <SuggestionPanel
-              ExpressionRenderer={startDependencies.expressions.ReactExpressionRenderer}
-              datasourceMap={datasourceMap}
-              visualizationMap={visualizationMap}
-              frame={framePublicAPI}
-              core={coreStart}
-              nowProvider={startDependencies.data.nowProvider}
-              showOnlyIcons
-              wrapSuggestions
-            />
-          </div>
-        </>
+            <div
+              css={css`
+                padding: ${euiTheme.size.s};
+              `}
+            >
+              <SuggestionPanel
+                ExpressionRenderer={startDependencies.expressions.ReactExpressionRenderer}
+                datasourceMap={datasourceMap}
+                visualizationMap={visualizationMap}
+                frame={framePublicAPI}
+                core={coreStart}
+                nowProvider={startDependencies.data.nowProvider}
+                showOnlyIcons
+                wrapSuggestions
+              />
+            </div>
+          </EuiFlexItem>
+        </EuiFlexGroup>
       </FlyoutWrapper>
     </>
   );

@@ -52,11 +52,13 @@ export const FlyoutWrapper = ({
           }
           .euiFlyoutBody__overflowContent {
             padding: 0;
+            block-size: 100%;
+            overflow: hidden;
           }
         `}
       >
-        <EuiFlexGroup gutterSize="none" direction="column">
-          {displayFlyoutHeader && (
+        {/* <EuiFlexGroup gutterSize="none" direction="column"> */}
+        {/* {displayFlyoutHeader && (
             <EuiFlexItem
               data-test-subj="editFlyoutHeader"
               css={css`
@@ -102,9 +104,9 @@ export const FlyoutWrapper = ({
                 )}
               </EuiFlexGroup>
             </EuiFlexItem>
-          )}
-          {children}
-        </EuiFlexGroup>
+          )} */}
+        {children}
+        {/* </EuiFlexGroup> */}
       </EuiFlyoutBody>
       {isInlineFooterVisible && (
         <EuiFlyoutFooter>
