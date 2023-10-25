@@ -292,6 +292,7 @@ export function LensEditConfigurationFlyout({
               />
             </EuiFlexItem>
           )}
+
           {displayCallout && (
             <EuiFlexItem
               css={css`
@@ -311,11 +312,12 @@ export function LensEditConfigurationFlyout({
               <EuiSpacer size="s" />
             </EuiFlexItem>
           )}
+
           <EuiFlexItem
             css={css`
               background: green;
             `}
-            grow={false}
+            grow={false} //todo: conditionally change false to 1 when accordion is open
           >
             <EuiAccordion
               id="layer-configuration"
@@ -339,6 +341,7 @@ export function LensEditConfigurationFlyout({
               `}
               onToggle={onToggle}
             >
+              {/* todo: make interior accordion contents vertically scrollable */}
               <LayerConfiguration
                 attributes={attributes}
                 coreStart={coreStart}
@@ -351,17 +354,20 @@ export function LensEditConfigurationFlyout({
               />
             </EuiAccordion>
           </EuiFlexItem>
+
           <EuiFlexItem
             css={css`
               background: yellow;
             `}
-            grow={false}
+            grow={false} //todo: conditionally change false to 1 when accordion is open
           >
             <div
               css={css`
                 padding: ${euiTheme.size.s};
               `}
             >
+              {' '}
+              {/* todo: make interior accordion contents vertically scrollable */}
               <SuggestionPanel
                 ExpressionRenderer={startDependencies.expressions.ReactExpressionRenderer}
                 datasourceMap={datasourceMap}

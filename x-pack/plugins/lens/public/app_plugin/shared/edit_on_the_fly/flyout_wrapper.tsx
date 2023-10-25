@@ -52,6 +52,10 @@ export const FlyoutWrapper = ({
           }
           .euiFlyoutBody__overflowContent {
             padding: 0;
+          }
+
+          // michael additions
+          .euiFlyoutBody__overflowContent {
             block-size: 100%;
             overflow: hidden;
           }
@@ -108,6 +112,7 @@ export const FlyoutWrapper = ({
         {children}
         {/* </EuiFlexGroup> */}
       </EuiFlyoutBody>
+
       {isInlineFooterVisible && (
         <EuiFlyoutFooter>
           <EuiFlexGroup justifyContent="spaceBetween">
