@@ -844,6 +844,9 @@ importers:
       '@kbn/banners-plugin':
         specifier: workspace:*
         version: link:x-pack/platform/plugins/private/banners
+      '@kbn/boost-plugin':
+        specifier: workspace:*
+        version: link:x-pack/platform/plugins/private/boost
       '@kbn/calculate-auto':
         specifier: workspace:*
         version: link:src/platform/packages/shared/kbn-calculate-auto
@@ -9200,6 +9203,8 @@ importers:
   x-pack/platform/packages/shared/security/plugin_types_server: {}
 
   x-pack/platform/plugins/private/banners: {}
+
+  x-pack/platform/plugins/private/boost: {}
 
   x-pack/platform/plugins/private/canvas: {}
 

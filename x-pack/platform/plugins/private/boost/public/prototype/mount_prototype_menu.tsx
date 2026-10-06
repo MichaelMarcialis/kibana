@@ -1,0 +1,28 @@
+/*
+ * Copyright Elasticsearch B.V. and/or licensed to Elasticsearch B.V. under one
+ * or more contributor license agreements. Licensed under the Elastic License
+ * 2.0; you may not use this file except in compliance with the Elastic License
+ * 2.0.
+ */
+
+import React from 'react';
+import ReactDOM from 'react-dom';
+import type { CoreStart } from '@kbn/core/public';
+import { KibanaRenderContextProvider } from '@kbn/react-kibana-context-render';
+import { PrototypeMenu } from './prototype_menu';
+
+/** Renders the prototype menu into a global header slot and returns an unmount function. */
+export const mountPrototypeMenu = (element: HTMLElement, core: CoreStart): (() => void) => {
+  ReactDOM.render(
+    <KibanaRenderContextProvider {...core}>
+      <PrototypeMenu
+        http={core.http}
+        notifications={core.notifications}
+        onRestored={() => window.location.reload()}
+      />
+    </KibanaRenderContextProvider>,
+    element
+  );
+
+  return () => ReactDOM.unmountComponentAtNode(element);
+};

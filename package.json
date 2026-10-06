@@ -308,6 +308,7 @@
     "@kbn/avc-banner": "workspace:*",
     "@kbn/background-search": "workspace:*",
     "@kbn/banners-plugin": "workspace:*",
+    "@kbn/boost-plugin": "workspace:*",
     "@kbn/calculate-auto": "workspace:*",
     "@kbn/calculate-width-from-char-count": "workspace:*",
     "@kbn/canvas-plugin": "workspace:*",

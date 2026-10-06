@@ -19,6 +19,7 @@
     "xpack.apmSourcesAccess": "platform/plugins/shared/apm_sources_access",
     "xpack.automaticImport": "platform/plugins/shared/automatic_import",
     "xpack.banners": "platform/plugins/private/banners",
+    "xpack.boost": "platform/plugins/private/boost",
     "xpack.canvas": "platform/plugins/private/canvas",
     "xpack.cases": "platform/plugins/shared/cases",
     "xpack.clientApps": "solutions/observability/plugins/client_apps",

@@ -41,6 +41,7 @@ export type ManagementId =
   | 'observabilityAiAssistantManagement'
   | 'api_keys'
   | 'application_connections'
+  | 'boost'
   | 'cases'
   | 'cross_cluster_replication'
   | 'dataViews'

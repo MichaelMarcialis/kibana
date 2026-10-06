@@ -1,0 +1,25 @@
+{
+  "type": "plugin",
+  "id": "@kbn/boost-plugin",
+  "owner": [
+    "@elastic/kibana-management"
+  ],
+  "group": "platform",
+  "visibility": "private",
+  "plugin": {
+    "id": "boost",
+    "server": true,
+    "browser": true,
+    "configPath": [
+      "xpack",
+      "boost"
+    ],
+    "requiredPlugins": [
+      "management",
+      "features"
+    ],
+    "requiredBundles": [
+      "kibanaReact"
+    ]
+  }
+}

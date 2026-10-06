@@ -30,6 +30,10 @@ xpack.cloud.serverless.project_type: vectordb
 ## Enable the Serverless Vectordb plugin
 xpack.serverless.vectordb.enabled: true
 
+## Search boost prototype (boost profiles and rules)
+xpack.boost.enabled: true
+migrations.allowWipTypes: ['boost_prototype']
+
 ## Set the home route
 uiSettings.overrides.defaultRoute: /app/vectordb
 
