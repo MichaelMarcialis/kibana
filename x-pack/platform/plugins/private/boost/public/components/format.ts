@@ -12,7 +12,7 @@ const numberFormat = new Intl.NumberFormat(i18n.getLocale(), { maximumFractionDi
 
 export const formatBoostRange = (minBoost: number, maxBoost: number): string =>
   i18n.translate('xpack.boost.format.boostRange', {
-    defaultMessage: '{min} – {max}',
+    defaultMessage: '{min}–{max}',
     values: { min: numberFormat.format(minBoost), max: numberFormat.format(maxBoost) },
   });
 

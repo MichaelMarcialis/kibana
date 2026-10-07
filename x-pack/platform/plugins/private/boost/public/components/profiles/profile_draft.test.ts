@@ -11,6 +11,7 @@ import {
   createEmptyDraft,
   draftFromProfile,
   draftToProfileInput,
+  getCopyName,
   getDraftErrors,
   hasDraftErrors,
 } from './profile_draft';
@@ -60,5 +61,18 @@ describe('profile drafts', () => {
     });
 
     expect(getDraftErrors(draft, []).standardMaxAge).toBe('below_previous_period');
+  });
+});
+
+describe('getCopyName', () => {
+  it('appends -copy and drops the elastic- prefix from managed profiles', () => {
+    expect(getCopyName('products-fast', [])).toBe('products-fast-copy');
+    expect(getCopyName('elastic-performant', [])).toBe('performant-copy');
+  });
+
+  it('adds a number when the copy name is taken', () => {
+    expect(getCopyName('products-fast', ['products-fast-copy', 'products-fast-copy-2'])).toBe(
+      'products-fast-copy-3'
+    );
   });
 });

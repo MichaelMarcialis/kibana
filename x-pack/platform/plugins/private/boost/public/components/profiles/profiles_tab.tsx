@@ -6,6 +6,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { css } from '@emotion/react';
 import type {
   EuiBasicTableColumn,
   EuiSearchBarProps,
@@ -15,10 +16,9 @@ import {
   EuiBadge,
   EuiButton,
   EuiConfirmModal,
-  EuiFlexGroup,
-  EuiFlexItem,
   EuiInMemoryTable,
   EuiScreenReaderOnly,
+  useEuiTheme,
   useGeneratedHtmlId,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
@@ -38,7 +38,7 @@ interface ProfilesTabProps {
 
 type ProfileRow = BoostProfile & { dataSourceCount: number; ruleCount: number };
 
-type FlyoutState = { profile?: BoostProfile } | undefined;
+type FlyoutState = { profile?: BoostProfile; duplicateOf?: BoostProfile } | undefined;
 
 const PAGE_SIZE = 10;
 
@@ -50,6 +50,9 @@ const isCustomProfile = ({ is_builtin: isBuiltin }: BoostProfile) => !isBuiltin;
 
 export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesTabProps) => {
   const { notifications } = useBoostServices();
+  const { euiTheme } = useEuiTheme();
+  // Tables use tabular (fixed-width) numerals; ranges read better with the theme's default figures.
+  const proportionalNumbersCss = css({ fontFeatureSettings: euiTheme.font.featureSettings });
   const deleteModalTitleId = useGeneratedHtmlId();
   const [flyout, setFlyout] = useState<FlyoutState>();
   const [profileToDelete, setProfileToDelete] = useState<BoostProfile>();
@@ -81,9 +84,23 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
         }),
         icon: 'pencil',
         type: 'icon',
+        isPrimary: true,
         available: isCustomProfile,
         onClick: (profile) => setFlyout({ profile }),
         'data-test-subj': 'editBoostProfile',
+      },
+      {
+        name: i18n.translate('xpack.boost.profilesTab.duplicateAction', {
+          defaultMessage: 'Duplicate',
+        }),
+        description: i18n.translate('xpack.boost.profilesTab.duplicateActionDescription', {
+          defaultMessage: 'Create a new boost profile from this one',
+        }),
+        icon: 'copy',
+        type: 'icon',
+        isPrimary: true,
+        onClick: (profile) => setFlyout({ duplicateOf: profile }),
+        'data-test-subj': 'duplicateBoostProfile',
       },
       {
         name: i18n.translate('xpack.boost.profilesTab.deleteAction', { defaultMessage: 'Delete' }),
@@ -106,14 +123,15 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       name: i18n.translate('xpack.boost.profilesTab.nameColumn', { defaultMessage: 'Name' }),
       sortable: true,
       render: (name: string, { is_builtin: isBuiltin }: ProfileRow) => (
-        <EuiFlexGroup gutterSize="s" alignItems="center" responsive={false} wrap>
-          <EuiFlexItem grow={false}>{name}</EuiFlexItem>
+        <>
+          {name}
           {isBuiltin && (
-            <EuiFlexItem grow={false}>
+            <>
+              {' '}
               <EuiBadge>{MANAGED_BADGE_LABEL}</EuiBadge>
-            </EuiFlexItem>
+            </>
           )}
-        </EuiFlexGroup>
+        </>
       ),
     },
     {
@@ -121,18 +139,6 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       name: i18n.translate('xpack.boost.profilesTab.typeColumn', { defaultMessage: 'Type' }),
       sortable: true,
       render: (type: BoostProfile['type']) => PROFILE_TYPE_LABELS[type],
-    },
-    {
-      name: i18n.translate('xpack.boost.profilesTab.boostColumn', { defaultMessage: 'Boost' }),
-      render: (profile: ProfileRow) =>
-        profile.type === 'indices'
-          ? formatBoostRange(profile.min_boost, profile.max_boost)
-          : i18n.translate('xpack.boost.profilesTab.recentBoost', {
-              defaultMessage: '{range} (recent)',
-              values: {
-                range: formatBoostRange(profile.recent.min_boost, profile.recent.max_boost),
-              },
-            }),
     },
     {
       field: 'dataSourceCount',
@@ -147,6 +153,16 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       name: i18n.translate('xpack.boost.profilesTab.rulesColumn', { defaultMessage: 'Rules' }),
       sortable: true,
       dataType: 'number',
+    },
+    {
+      name: i18n.translate('xpack.boost.profilesTab.boostRangeColumn', {
+        defaultMessage: 'Boost range',
+      }),
+      render: (profile: ProfileRow) => {
+        const { min_boost: min, max_boost: max } =
+          profile.type === 'indices' ? profile : profile.recent;
+        return <span css={proportionalNumbersCss}>{formatBoostRange(min, max)}</span>;
+      },
     },
     ...(canEdit ? [actionsColumn] : []),
   ];
@@ -200,6 +216,7 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       {flyout && (
         <ProfileFlyout
           profile={flyout.profile}
+          duplicateOf={flyout.duplicateOf}
           takenNames={profiles.map(({ name }) => name)}
           onClose={() => setFlyout(undefined)}
         />

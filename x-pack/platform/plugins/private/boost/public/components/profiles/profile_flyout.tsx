@@ -36,6 +36,7 @@ import type { BoostRangeDraft, ProfileDraft } from './profile_draft';
 import {
   createEmptyDraft,
   draftFromProfile,
+  getCopyName,
   draftToProfileInput,
   getDraftErrors,
   hasDraftErrors,
@@ -47,11 +48,27 @@ import {
 } from './profile_messages';
 
 interface ProfileFlyoutProps {
-  /** The custom profile to edit; omit to create a new profile. */
+  /** The custom profile to edit. */
   profile?: BoostProfile;
+  /** A profile to copy into a new profile. Ignored when editing. */
+  duplicateOf?: BoostProfile;
   takenNames: readonly string[];
   onClose: () => void;
 }
+
+const getInitialDraft = (
+  profile: BoostProfile | undefined,
+  duplicateOf: BoostProfile | undefined,
+  takenNames: readonly string[]
+): ProfileDraft => {
+  if (profile) {
+    return draftFromProfile(profile);
+  }
+  if (duplicateOf) {
+    return { ...draftFromProfile(duplicateOf), name: getCopyName(duplicateOf.name, takenNames) };
+  }
+  return createEmptyDraft();
+};
 
 const TYPE_OPTIONS: ReadonlyArray<PresetOption<BoostProfileType>> = [
   {
@@ -186,13 +203,18 @@ const PeriodHeading = ({ title, description }: { title: string; description: str
   </>
 );
 
-export const ProfileFlyout = ({ profile, takenNames, onClose }: ProfileFlyoutProps) => {
+export const ProfileFlyout = ({
+  profile,
+  duplicateOf,
+  takenNames,
+  onClose,
+}: ProfileFlyoutProps) => {
   const { notifications } = useBoostServices();
   const titleId = useGeneratedHtmlId();
   const isEditing = profile !== undefined;
 
   const [draft, setDraft] = useState<ProfileDraft>(() =>
-    profile ? draftFromProfile(profile) : createEmptyDraft()
+    getInitialDraft(profile, duplicateOf, takenNames)
   );
   const [showErrors, setShowErrors] = useState(false);
   const [savedProfileName, setSavedProfileName] = useState<string | undefined>();
@@ -280,6 +302,10 @@ export const ProfileFlyout = ({ profile, takenNames, onClose }: ProfileFlyoutPro
             {isEditing
               ? i18n.translate('xpack.boost.profileForm.editTitle', {
                   defaultMessage: 'Edit boost profile',
+                })
+              : duplicateOf
+              ? i18n.translate('xpack.boost.profileForm.duplicateTitle', {
+                  defaultMessage: 'Duplicate boost profile',
                 })
               : i18n.translate('xpack.boost.profileForm.createTitle', {
                   defaultMessage: 'Create boost profile',
