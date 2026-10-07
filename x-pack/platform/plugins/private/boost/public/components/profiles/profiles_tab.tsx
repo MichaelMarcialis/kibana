@@ -147,7 +147,7 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
     {
       field: 'type',
       name: i18n.translate('xpack.boost.profilesTab.typeColumn', { defaultMessage: 'Type' }),
-      width: '14%',
+      width: '12%',
       sortable: true,
       render: (type: BoostProfile['type']) => PROFILE_TYPE_LABELS[type],
     },
