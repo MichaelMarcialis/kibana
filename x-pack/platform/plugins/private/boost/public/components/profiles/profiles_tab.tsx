@@ -6,7 +6,6 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { css } from '@emotion/react';
 import type {
   EuiBasicTableColumn,
   EuiSearchBarProps,
@@ -18,7 +17,6 @@ import {
   EuiConfirmModal,
   EuiInMemoryTable,
   EuiScreenReaderOnly,
-  useEuiTheme,
   useGeneratedHtmlId,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
@@ -50,9 +48,6 @@ const isCustomProfile = ({ is_builtin: isBuiltin }: BoostProfile) => !isBuiltin;
 
 export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesTabProps) => {
   const { notifications } = useBoostServices();
-  const { euiTheme } = useEuiTheme();
-  // Tables use tabular (fixed-width) numerals; ranges read better with the theme's default figures.
-  const proportionalNumbersCss = css({ fontFeatureSettings: euiTheme.font.featureSettings });
   const deleteModalTitleId = useGeneratedHtmlId();
   const [flyout, setFlyout] = useState<FlyoutState>();
   const [profileToDelete, setProfileToDelete] = useState<BoostProfile>();
@@ -68,7 +63,9 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
     }));
   }, [profiles, rules, dataSources]);
 
+  // Wide enough for up to three icon buttons (two primary actions plus the "All actions" menu).
   const actionsColumn: EuiTableActionsColumnType<ProfileRow> = {
+    width: '104px',
     name: (
       <EuiScreenReaderOnly>
         <span>
@@ -122,8 +119,9 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       field: 'name',
       name: i18n.translate('xpack.boost.profilesTab.nameColumn', { defaultMessage: 'Name' }),
       sortable: true,
+      // A single span keeps the name and badge in one inline run; table cells are flex containers.
       render: (name: string, { is_builtin: isBuiltin }: ProfileRow) => (
-        <>
+        <span>
           {name}
           {isBuiltin && (
             <>
@@ -131,12 +129,13 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
               <EuiBadge>{MANAGED_BADGE_LABEL}</EuiBadge>
             </>
           )}
-        </>
+        </span>
       ),
     },
     {
       field: 'type',
       name: i18n.translate('xpack.boost.profilesTab.typeColumn', { defaultMessage: 'Type' }),
+      width: '14%',
       sortable: true,
       render: (type: BoostProfile['type']) => PROFILE_TYPE_LABELS[type],
     },
@@ -145,12 +144,14 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       name: i18n.translate('xpack.boost.profilesTab.dataSourcesColumn', {
         defaultMessage: 'Data sources',
       }),
+      width: '12%',
       sortable: true,
       dataType: 'number',
     },
     {
       field: 'ruleCount',
       name: i18n.translate('xpack.boost.profilesTab.rulesColumn', { defaultMessage: 'Rules' }),
+      width: '8%',
       sortable: true,
       dataType: 'number',
     },
@@ -158,10 +159,12 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       name: i18n.translate('xpack.boost.profilesTab.boostRangeColumn', {
         defaultMessage: 'Boost range',
       }),
+      width: '12%',
+      align: 'right',
       render: (profile: ProfileRow) => {
         const { min_boost: min, max_boost: max } =
           profile.type === 'indices' ? profile : profile.recent;
-        return <span css={proportionalNumbersCss}>{formatBoostRange(min, max)}</span>;
+        return formatBoostRange(min, max);
       },
     },
     ...(canEdit ? [actionsColumn] : []),
