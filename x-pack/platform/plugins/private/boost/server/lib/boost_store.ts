@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import type { SavedObjectsClientContract } from '@kbn/core/server';
+import type { ElasticsearchClient, SavedObjectsClientContract } from '@kbn/core/server';
 import { SavedObjectsErrorHelpers } from '@kbn/core/server';
 import { BOOST_SAVED_OBJECT_TYPE, BOOST_SETTINGS_SAVED_OBJECT_ID } from '../../common/constants';
 import {
@@ -22,6 +22,7 @@ import type {
   BoostState,
   SimpleModeDefaults,
 } from '../../common/types';
+import { getDataSources } from './data_sources';
 import { BoostRequestError } from './errors';
 
 type SettingsAttributes = Pick<BoostSettings, 'mode' | 'simple' | 'advanced'> & {
@@ -86,17 +87,22 @@ const getCustomProfiles = async (client: SavedObjectsClientContract): Promise<Bo
     .sort((a, b) => a.name.localeCompare(b.name));
 };
 
-/** Returns the settings plus the profiles and rules they currently imply. */
-export const getState = async (client: SavedObjectsClientContract): Promise<BoostState> => {
-  const [settings, customProfiles] = await Promise.all([
+/** Returns the settings, the profiles and rules they currently imply, and the project's data sources. */
+export const getState = async (
+  client: SavedObjectsClientContract,
+  esClient: ElasticsearchClient
+): Promise<BoostState> => {
+  const [settings, customProfiles, dataSources] = await Promise.all([
     getSettings(client),
     getCustomProfiles(client),
+    getDataSources(esClient),
   ]);
 
   return {
     settings,
     profiles: [...BUILTIN_PROFILES, ...customProfiles],
     rules: createDefaultRules(getEffectiveDefaults(settings)),
+    data_sources: dataSources,
   };
 };
 
@@ -138,7 +144,7 @@ const getCustomProfile = async (
 export const createProfile = async (
   client: SavedObjectsClientContract,
   profile: BoostProfileInput
-): Promise<BoostState> => {
+): Promise<void> => {
   assertNotBuiltin(profile.name, 'replaced');
   try {
     await saveProfile(client, profile, false);
@@ -148,7 +154,6 @@ export const createProfile = async (
     }
     throw error;
   }
-  return getState(client);
 };
 
 /** Replaces a custom profile. The name and type can't change. */
@@ -156,7 +161,7 @@ export const updateProfile = async (
   client: SavedObjectsClientContract,
   name: string,
   profile: BoostProfileInput
-): Promise<BoostState> => {
+): Promise<void> => {
   assertNotBuiltin(name, 'edited');
   if (profile.name !== name) {
     throw new BoostRequestError(400, 'A boost profile cannot be renamed.');
@@ -166,37 +171,33 @@ export const updateProfile = async (
     throw new BoostRequestError(400, 'A boost profile type cannot be changed.');
   }
   await saveProfile(client, profile, true);
-  return getState(client);
 };
 
 export const deleteProfile = async (
   client: SavedObjectsClientContract,
   name: string
-): Promise<BoostState> => {
+): Promise<void> => {
   assertNotBuiltin(name, 'deleted');
   await getCustomProfile(client, name);
   await client.delete(BOOST_SAVED_OBJECT_TYPE, profileId(name));
-  return getState(client);
 };
 
 export const updateSimpleDefaults = async (
   client: SavedObjectsClientContract,
   simple: SimpleModeDefaults
-): Promise<BoostState> => {
+): Promise<void> => {
   await saveSettings(client, { ...(await getSettings(client)), simple });
-  return getState(client);
 };
 
 export const updateMode = async (
   client: SavedObjectsClientContract,
   mode: BoostMode
-): Promise<BoostState> => {
+): Promise<void> => {
   await saveSettings(client, { ...(await getSettings(client)), mode });
-  return getState(client);
 };
 
 /** Deletes the settings and all custom profiles, returning the project to its out-of-the-box state. */
-export const resetState = async (client: SavedObjectsClientContract): Promise<BoostState> => {
+export const resetState = async (client: SavedObjectsClientContract): Promise<void> => {
   const customProfiles = await getCustomProfiles(client);
   if (customProfiles.length > 0) {
     await client.bulkDelete(
@@ -211,5 +212,4 @@ export const resetState = async (client: SavedObjectsClientContract): Promise<Bo
       throw error;
     }
   }
-  return getState(client);
 };

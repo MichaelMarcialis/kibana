@@ -14,9 +14,9 @@ import {
   BOOST_SAVED_OBJECT_TYPE,
   MANAGE_BOOST_PRIVILEGE,
 } from '../../common/constants';
-import { resetState } from '../lib/boost_store';
+import { getState, resetState } from '../lib/boost_store';
 import { ensureSampleData } from '../prototype/sample_data';
-import { getSavedObjectsClient } from './get_saved_objects_client';
+import { getRequestClients } from './request_clients';
 
 const hasSeededSampleData = async (client: SavedObjectsClientContract): Promise<boolean> => {
   try {
@@ -49,13 +49,12 @@ export const registerPrototypeRoutes = (router: IRouter) => {
       validate: false,
     },
     async (context, _request, response) => {
-      const savedObjectsClient = await getSavedObjectsClient(context);
+      const { savedObjectsClient, esClient } = await getRequestClients(context);
       if (await hasSeededSampleData(savedObjectsClient)) {
         return response.ok({ body: { created: [] } });
       }
 
-      const { elasticsearch } = await context.core;
-      const created = await ensureSampleData(elasticsearch.client.asCurrentUser);
+      const created = await ensureSampleData(esClient);
       await markSampleDataSeeded(savedObjectsClient);
       return response.ok({ body: { created } });
     }
@@ -69,13 +68,14 @@ export const registerPrototypeRoutes = (router: IRouter) => {
       validate: false,
     },
     async (context, _request, response) => {
-      const savedObjectsClient = await getSavedObjectsClient(context);
-      const { elasticsearch } = await context.core;
+      const { savedObjectsClient, esClient } = await getRequestClients(context);
 
-      const state = await resetState(savedObjectsClient);
-      const created = await ensureSampleData(elasticsearch.client.asCurrentUser);
+      await resetState(savedObjectsClient);
+      const created = await ensureSampleData(esClient);
       await markSampleDataSeeded(savedObjectsClient);
-      return response.ok({ body: { state, created } });
+      return response.ok({
+        body: { state: await getState(savedObjectsClient, esClient), created },
+      });
     }
   );
 };

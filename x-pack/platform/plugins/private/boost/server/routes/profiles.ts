@@ -21,9 +21,9 @@ import {
   getProfileNameError,
   parseMaxAgeDays,
 } from '../../common/validation';
-import { createProfile, deleteProfile, updateProfile } from '../lib/boost_store';
+import { createProfile, deleteProfile, getState, updateProfile } from '../lib/boost_store';
 import { BoostRequestError } from '../lib/errors';
-import { getSavedObjectsClient } from './get_saved_objects_client';
+import { getRequestClients } from './request_clients';
 
 const PROFILE_NAME_MESSAGES: Record<ProfileNameError, string> = {
   required: 'must not be empty',
@@ -137,9 +137,9 @@ export const registerProfileRoutes = (router: IRouter) => {
     },
     async (context, { body }, response) => {
       try {
-        return response.ok({
-          body: await createProfile(await getSavedObjectsClient(context), body),
-        });
+        const { savedObjectsClient, esClient } = await getRequestClients(context);
+        await createProfile(savedObjectsClient, body);
+        return response.ok({ body: await getState(savedObjectsClient, esClient) });
       } catch (error) {
         return toErrorResponse(response, error);
       }
@@ -154,9 +154,9 @@ export const registerProfileRoutes = (router: IRouter) => {
     },
     async (context, { params: { name }, body }, response) => {
       try {
-        return response.ok({
-          body: await updateProfile(await getSavedObjectsClient(context), name, body),
-        });
+        const { savedObjectsClient, esClient } = await getRequestClients(context);
+        await updateProfile(savedObjectsClient, name, body);
+        return response.ok({ body: await getState(savedObjectsClient, esClient) });
       } catch (error) {
         return toErrorResponse(response, error);
       }
@@ -171,9 +171,9 @@ export const registerProfileRoutes = (router: IRouter) => {
     },
     async (context, { params: { name } }, response) => {
       try {
-        return response.ok({
-          body: await deleteProfile(await getSavedObjectsClient(context), name),
-        });
+        const { savedObjectsClient, esClient } = await getRequestClients(context);
+        await deleteProfile(savedObjectsClient, name);
+        return response.ok({ body: await getState(savedObjectsClient, esClient) });
       } catch (error) {
         return toErrorResponse(response, error);
       }

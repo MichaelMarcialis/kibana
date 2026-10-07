@@ -80,8 +80,17 @@ export interface BoostSettings {
   updated_at?: string;
 }
 
+export type DataSourceType = 'index' | 'data_stream';
+
+/** A regular index or data stream in the project that boost rules can apply to. */
+export interface BoostDataSource {
+  name: string;
+  type: DataSourceType;
+}
+
 export interface BoostState {
   settings: BoostSettings;
   profiles: BoostProfile[];
   rules: BoostRule[];
+  data_sources: BoostDataSource[];
 }

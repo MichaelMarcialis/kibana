@@ -15,7 +15,7 @@ import {
   READ_BOOST_PRIVILEGE,
 } from '../../common/constants';
 import { getState, updateMode, updateSimpleDefaults } from '../lib/boost_store';
-import { getSavedObjectsClient } from './get_saved_objects_client';
+import { getRequestClients } from './request_clients';
 import { registerProfileRoutes } from './profiles';
 import { registerPrototypeRoutes } from './prototype';
 
@@ -45,8 +45,10 @@ export const registerRoutes = (router: IRouter) => {
       security: { authz: { requiredPrivileges: [READ_BOOST_PRIVILEGE] } },
       validate: false,
     },
-    async (context, _request, response) =>
-      response.ok({ body: await getState(await getSavedObjectsClient(context)) })
+    async (context, _request, response) => {
+      const { savedObjectsClient, esClient } = await getRequestClients(context);
+      return response.ok({ body: await getState(savedObjectsClient, esClient) });
+    }
   );
 
   router.put(
@@ -55,8 +57,11 @@ export const registerRoutes = (router: IRouter) => {
       security: { authz: { requiredPrivileges: [MANAGE_BOOST_PRIVILEGE] } },
       validate: { body: simpleDefaultsSchema },
     },
-    async (context, { body }, response) =>
-      response.ok({ body: await updateSimpleDefaults(await getSavedObjectsClient(context), body) })
+    async (context, { body }, response) => {
+      const { savedObjectsClient, esClient } = await getRequestClients(context);
+      await updateSimpleDefaults(savedObjectsClient, body);
+      return response.ok({ body: await getState(savedObjectsClient, esClient) });
+    }
   );
 
   router.put(
@@ -65,8 +70,11 @@ export const registerRoutes = (router: IRouter) => {
       security: { authz: { requiredPrivileges: [MANAGE_BOOST_PRIVILEGE] } },
       validate: { body: modeSchema },
     },
-    async (context, { body: { mode } }, response) =>
-      response.ok({ body: await updateMode(await getSavedObjectsClient(context), mode) })
+    async (context, { body: { mode } }, response) => {
+      const { savedObjectsClient, esClient } = await getRequestClients(context);
+      await updateMode(savedObjectsClient, mode);
+      return response.ok({ body: await getState(savedObjectsClient, esClient) });
+    }
   );
 
   registerProfileRoutes(router);

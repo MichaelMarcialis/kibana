@@ -134,7 +134,12 @@ export const BoostPage = () => {
           />
         )}
         {isAdvanced && selectedTab === 'profiles' && (
-          <ProfilesTab profiles={state.profiles} rules={state.rules} canEdit={canEdit} />
+          <ProfilesTab
+            profiles={state.profiles}
+            rules={state.rules}
+            dataSources={state.data_sources}
+            canEdit={canEdit}
+          />
         )}
         {isAdvanced && selectedTab === 'rules' && (
           <RulesTable rules={state.rules} profiles={state.profiles} />

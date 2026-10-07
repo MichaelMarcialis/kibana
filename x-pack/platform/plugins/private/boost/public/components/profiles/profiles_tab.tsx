@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import type {
   EuiBasicTableColumn,
   EuiSearchBarProps,
@@ -18,10 +18,12 @@ import {
   EuiFlexGroup,
   EuiFlexItem,
   EuiInMemoryTable,
+  EuiScreenReaderOnly,
   useGeneratedHtmlId,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
-import type { BoostProfile, BoostRule } from '../../../common/types';
+import { countDataSourcesByProfile, countRulesByProfile } from '../../../common/resolution';
+import type { BoostDataSource, BoostProfile, BoostRule } from '../../../common/types';
 import { useBoostServices } from '../../hooks/use_boost_services';
 import { useDeleteProfile } from '../../hooks/use_boost_state';
 import { PROFILE_TYPE_LABELS, formatBoostRange } from '../format';
@@ -30,111 +32,85 @@ import { ProfileFlyout } from './profile_flyout';
 interface ProfilesTabProps {
   profiles: BoostProfile[];
   rules: BoostRule[];
+  dataSources: BoostDataSource[];
   canEdit: boolean;
 }
 
+type ProfileRow = BoostProfile & { dataSourceCount: number; ruleCount: number };
+
 type FlyoutState = { profile?: BoostProfile } | undefined;
 
-const DEFAULT_BADGE_LABELS: Readonly<Record<BoostProfile['type'], string>> = {
-  indices: i18n.translate('xpack.boost.profilesTab.defaultForIndices', {
-    defaultMessage: 'Default for indices',
-  }),
-  data_streams: i18n.translate('xpack.boost.profilesTab.defaultForDataStreams', {
-    defaultMessage: 'Default for data streams',
-  }),
-};
+const PAGE_SIZE = 10;
 
-const getIndicesOptions = (profile: BoostProfile): string[] => {
-  if (profile.type !== 'indices') {
-    return [];
-  }
-  return [
-    profile.high_availability === 'one_extra_copy'
-      ? i18n.translate('xpack.boost.profilesTab.extraCopy', { defaultMessage: 'Extra copy' })
-      : undefined,
-    profile.prewarm
-      ? i18n.translate('xpack.boost.profilesTab.prewarm', { defaultMessage: 'Prewarm' })
-      : undefined,
-    profile.pinned
-      ? i18n.translate('xpack.boost.profilesTab.pin', { defaultMessage: 'Pin' })
-      : undefined,
-  ].filter((option): option is string => option !== undefined);
-};
+const MANAGED_BADGE_LABEL = i18n.translate('xpack.boost.profilesTab.managedBadge', {
+  defaultMessage: 'Managed',
+});
 
-const getDetails = (profile: BoostProfile): string =>
-  profile.type === 'indices'
-    ? getIndicesOptions(profile).join(' · ') || '—'
-    : i18n.translate('xpack.boost.profilesTab.dataStreamWindows', {
-        defaultMessage: 'Recent up to {recent} · Standard up to {standard}',
-        values: { recent: profile.recent.max_age, standard: profile.standard.max_age },
-      });
+const isCustomProfile = ({ is_builtin: isBuiltin }: BoostProfile) => !isBuiltin;
 
-export const ProfilesTab = ({ profiles, rules, canEdit }: ProfilesTabProps) => {
+export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesTabProps) => {
   const { notifications } = useBoostServices();
   const deleteModalTitleId = useGeneratedHtmlId();
   const [flyout, setFlyout] = useState<FlyoutState>();
   const [profileToDelete, setProfileToDelete] = useState<BoostProfile>();
   const { mutate: deleteProfile, isLoading: isDeleting } = useDeleteProfile();
 
-  const defaultProfileNames = new Set(
-    rules.filter(({ is_builtin: isBuiltin }) => isBuiltin).map(({ boost_profile: name }) => name)
-  );
+  const rows = useMemo<ProfileRow[]>(() => {
+    const dataSourceCounts = countDataSourcesByProfile(dataSources, rules, profiles);
+    const ruleCounts = countRulesByProfile(rules);
+    return profiles.map((profile) => ({
+      ...profile,
+      dataSourceCount: dataSourceCounts.get(profile.name) ?? 0,
+      ruleCount: ruleCounts.get(profile.name) ?? 0,
+    }));
+  }, [profiles, rules, dataSources]);
 
-  const actionsColumn: EuiTableActionsColumnType<BoostProfile> = {
-    name: i18n.translate('xpack.boost.profilesTab.actionsColumn', {
-      defaultMessage: 'Actions',
-    }),
+  const actionsColumn: EuiTableActionsColumnType<ProfileRow> = {
+    name: (
+      <EuiScreenReaderOnly>
+        <span>
+          {i18n.translate('xpack.boost.profilesTab.actionsColumn', { defaultMessage: 'Actions' })}
+        </span>
+      </EuiScreenReaderOnly>
+    ),
     actions: [
       {
-        name: i18n.translate('xpack.boost.profilesTab.editAction', {
-          defaultMessage: 'Edit',
-        }),
+        name: i18n.translate('xpack.boost.profilesTab.editAction', { defaultMessage: 'Edit' }),
         description: i18n.translate('xpack.boost.profilesTab.editActionDescription', {
           defaultMessage: 'Edit this boost profile',
         }),
         icon: 'pencil',
         type: 'icon',
-        available: ({ is_builtin: isBuiltin }: BoostProfile) => !isBuiltin,
-        onClick: (profile: BoostProfile) => setFlyout({ profile }),
+        available: isCustomProfile,
+        onClick: (profile) => setFlyout({ profile }),
         'data-test-subj': 'editBoostProfile',
       },
       {
-        name: i18n.translate('xpack.boost.profilesTab.deleteAction', {
-          defaultMessage: 'Delete',
-        }),
+        name: i18n.translate('xpack.boost.profilesTab.deleteAction', { defaultMessage: 'Delete' }),
         description: i18n.translate('xpack.boost.profilesTab.deleteActionDescription', {
           defaultMessage: 'Delete this boost profile',
         }),
         icon: 'trash',
         color: 'danger',
         type: 'icon',
-        available: ({ is_builtin: isBuiltin }: BoostProfile) => !isBuiltin,
+        available: isCustomProfile,
         onClick: setProfileToDelete,
         'data-test-subj': 'deleteBoostProfile',
       },
     ],
   };
 
-  const columns: Array<EuiBasicTableColumn<BoostProfile>> = [
+  const columns: Array<EuiBasicTableColumn<ProfileRow>> = [
     {
       field: 'name',
       name: i18n.translate('xpack.boost.profilesTab.nameColumn', { defaultMessage: 'Name' }),
       sortable: true,
-      render: (name: string, profile: BoostProfile) => (
+      render: (name: string, { is_builtin: isBuiltin }: ProfileRow) => (
         <EuiFlexGroup gutterSize="s" alignItems="center" responsive={false} wrap>
           <EuiFlexItem grow={false}>{name}</EuiFlexItem>
-          {profile.is_builtin && (
+          {isBuiltin && (
             <EuiFlexItem grow={false}>
-              <EuiBadge color="hollow">
-                {i18n.translate('xpack.boost.profilesTab.elasticBadge', {
-                  defaultMessage: 'Elastic',
-                })}
-              </EuiBadge>
-            </EuiFlexItem>
-          )}
-          {defaultProfileNames.has(name) && (
-            <EuiFlexItem grow={false}>
-              <EuiBadge>{DEFAULT_BADGE_LABELS[profile.type]}</EuiBadge>
+              <EuiBadge>{MANAGED_BADGE_LABEL}</EuiBadge>
             </EuiFlexItem>
           )}
         </EuiFlexGroup>
@@ -148,7 +124,7 @@ export const ProfilesTab = ({ profiles, rules, canEdit }: ProfilesTabProps) => {
     },
     {
       name: i18n.translate('xpack.boost.profilesTab.boostColumn', { defaultMessage: 'Boost' }),
-      render: (profile: BoostProfile) =>
+      render: (profile: ProfileRow) =>
         profile.type === 'indices'
           ? formatBoostRange(profile.min_boost, profile.max_boost)
           : i18n.translate('xpack.boost.profilesTab.recentBoost', {
@@ -159,13 +135,24 @@ export const ProfilesTab = ({ profiles, rules, canEdit }: ProfilesTabProps) => {
             }),
     },
     {
-      name: i18n.translate('xpack.boost.profilesTab.detailsColumn', { defaultMessage: 'Details' }),
-      render: getDetails,
+      field: 'dataSourceCount',
+      name: i18n.translate('xpack.boost.profilesTab.dataSourcesColumn', {
+        defaultMessage: 'Data sources',
+      }),
+      sortable: true,
+      dataType: 'number',
+    },
+    {
+      field: 'ruleCount',
+      name: i18n.translate('xpack.boost.profilesTab.rulesColumn', { defaultMessage: 'Rules' }),
+      sortable: true,
+      dataType: 'number',
     },
     ...(canEdit ? [actionsColumn] : []),
   ];
 
   const search: EuiSearchBarProps = {
+    compressed: true,
     box: {
       incremental: true,
       placeholder: i18n.translate('xpack.boost.profilesTab.searchPlaceholder', {
@@ -174,23 +161,16 @@ export const ProfilesTab = ({ profiles, rules, canEdit }: ProfilesTabProps) => {
     },
     filters: [
       {
-        type: 'field_value_selection',
+        type: 'field_value_toggle_group',
         field: 'type',
-        name: i18n.translate('xpack.boost.profilesTab.typeFilter', { defaultMessage: 'Type' }),
-        multiSelect: false,
-        options: [
+        items: [
           { value: 'indices', name: PROFILE_TYPE_LABELS.indices },
           { value: 'data_streams', name: PROFILE_TYPE_LABELS.data_streams },
         ],
       },
     ],
     toolsRight: canEdit ? (
-      <EuiButton
-        fill
-        iconType="plusInCircle"
-        onClick={() => setFlyout({})}
-        data-test-subj="createBoostProfile"
-      >
+      <EuiButton fill size="s" onClick={() => setFlyout({})} data-test-subj="createBoostProfile">
         {i18n.translate('xpack.boost.profilesTab.createButton', {
           defaultMessage: 'Create boost profile',
         })}
@@ -204,11 +184,16 @@ export const ProfilesTab = ({ profiles, rules, canEdit }: ProfilesTabProps) => {
         tableCaption={i18n.translate('xpack.boost.profilesTab.caption', {
           defaultMessage: 'Boost profiles',
         })}
-        items={profiles}
+        items={rows}
         itemId="name"
         columns={columns}
         search={search}
-        pagination={false}
+        sorting={{ sort: { field: 'name', direction: 'asc' } }}
+        pagination={
+          rows.length > PAGE_SIZE
+            ? { pageSize: PAGE_SIZE, pageSizeOptions: [PAGE_SIZE, 25, 50] }
+            : undefined
+        }
         data-test-subj="boostProfilesTable"
       />
 
