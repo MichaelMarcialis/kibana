@@ -10,11 +10,7 @@ import type { BoostProfileType } from '../../common/types';
 
 const numberFormat = new Intl.NumberFormat(i18n.getLocale(), { maximumFractionDigits: 2 });
 
-export const formatBoostRange = (minBoost: number, maxBoost: number): string =>
-  i18n.translate('xpack.boost.format.boostRange', {
-    defaultMessage: '{min}–{max}',
-    values: { min: numberFormat.format(minBoost), max: numberFormat.format(maxBoost) },
-  });
+export const formatBoost = (boost: number): string => numberFormat.format(boost);
 
 export const PROFILE_TYPE_LABELS: Readonly<Record<BoostProfileType, string>> = {
   indices: i18n.translate('xpack.boost.format.indicesType', { defaultMessage: 'Indices' }),

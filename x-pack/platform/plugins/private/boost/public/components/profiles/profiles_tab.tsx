@@ -24,7 +24,7 @@ import { countDataSourcesByProfile, countRulesByProfile } from '../../../common/
 import type { BoostDataSource, BoostProfile, BoostRule } from '../../../common/types';
 import { useBoostServices } from '../../hooks/use_boost_services';
 import { useDeleteProfile } from '../../hooks/use_boost_state';
-import { PROFILE_TYPE_LABELS, formatBoostRange } from '../format';
+import { PROFILE_TYPE_LABELS, formatBoost } from '../format';
 import { ProfileFlyout } from './profile_flyout';
 
 interface ProfilesTabProps {
@@ -34,7 +34,13 @@ interface ProfilesTabProps {
   canEdit: boolean;
 }
 
-type ProfileRow = BoostProfile & { dataSourceCount: number; ruleCount: number };
+// Data stream profiles report their recent period's boost.
+type ProfileRow = BoostProfile & {
+  dataSourceCount: number;
+  ruleCount: number;
+  minBoost: number;
+  maxBoost: number;
+};
 
 type FlyoutState = { profile?: BoostProfile; duplicateOf?: BoostProfile } | undefined;
 
@@ -56,11 +62,17 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
   const rows = useMemo<ProfileRow[]>(() => {
     const dataSourceCounts = countDataSourcesByProfile(dataSources, rules, profiles);
     const ruleCounts = countRulesByProfile(rules);
-    return profiles.map((profile) => ({
-      ...profile,
-      dataSourceCount: dataSourceCounts.get(profile.name) ?? 0,
-      ruleCount: ruleCounts.get(profile.name) ?? 0,
-    }));
+    return profiles.map((profile) => {
+      const { min_boost: minBoost, max_boost: maxBoost } =
+        profile.type === 'indices' ? profile : profile.recent;
+      return {
+        ...profile,
+        dataSourceCount: dataSourceCounts.get(profile.name) ?? 0,
+        ruleCount: ruleCounts.get(profile.name) ?? 0,
+        minBoost,
+        maxBoost,
+      };
+    });
   }, [profiles, rules, dataSources]);
 
   // Wide enough for up to three icon buttons (two primary actions plus the "All actions" menu).
@@ -156,16 +168,24 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       dataType: 'number',
     },
     {
-      name: i18n.translate('xpack.boost.profilesTab.boostRangeColumn', {
-        defaultMessage: 'Boost range',
+      field: 'minBoost',
+      name: i18n.translate('xpack.boost.profilesTab.minBoostColumn', {
+        defaultMessage: 'Min boost',
       }),
-      width: '12%',
-      align: 'right',
-      render: (profile: ProfileRow) => {
-        const { min_boost: min, max_boost: max } =
-          profile.type === 'indices' ? profile : profile.recent;
-        return formatBoostRange(min, max);
-      },
+      width: '10%',
+      sortable: true,
+      dataType: 'number',
+      render: formatBoost,
+    },
+    {
+      field: 'maxBoost',
+      name: i18n.translate('xpack.boost.profilesTab.maxBoostColumn', {
+        defaultMessage: 'Max boost',
+      }),
+      width: '10%',
+      sortable: true,
+      dataType: 'number',
+      render: formatBoost,
     },
     ...(canEdit ? [actionsColumn] : []),
   ];
