@@ -6,16 +6,17 @@
  */
 
 import { schema } from '@kbn/config-schema';
-import type { IRouter, RequestHandlerContext, SavedObjectsClientContract } from '@kbn/core/server';
+import type { IRouter } from '@kbn/core/server';
 import {
   BOOST_MODE_API_PATH,
-  BOOST_SAVED_OBJECT_TYPE,
   BOOST_SIMPLE_DEFAULTS_API_PATH,
   BOOST_STATE_API_PATH,
   MANAGE_BOOST_PRIVILEGE,
   READ_BOOST_PRIVILEGE,
 } from '../../common/constants';
-import { getState, resetState, updateMode, updateSimpleDefaults } from '../lib/boost_store';
+import { getState, updateMode, updateSimpleDefaults } from '../lib/boost_store';
+import { getSavedObjectsClient } from './get_saved_objects_client';
+import { registerPrototypeRoutes } from './prototype';
 
 const simpleDefaultsSchema = schema.object({
   indices: schema.oneOf([
@@ -36,11 +37,6 @@ const modeSchema = schema.object({
   mode: schema.oneOf([schema.literal('simple'), schema.literal('advanced')]),
 });
 
-const getClient = async (context: RequestHandlerContext): Promise<SavedObjectsClientContract> => {
-  const { savedObjects } = await context.core;
-  return savedObjects.getClient({ includedHiddenTypes: [BOOST_SAVED_OBJECT_TYPE] });
-};
-
 export const registerRoutes = (router: IRouter) => {
   router.get(
     {
@@ -49,17 +45,7 @@ export const registerRoutes = (router: IRouter) => {
       validate: false,
     },
     async (context, _request, response) =>
-      response.ok({ body: await getState(await getClient(context)) })
-  );
-
-  router.delete(
-    {
-      path: BOOST_STATE_API_PATH,
-      security: { authz: { requiredPrivileges: [MANAGE_BOOST_PRIVILEGE] } },
-      validate: false,
-    },
-    async (context, _request, response) =>
-      response.ok({ body: await resetState(await getClient(context)) })
+      response.ok({ body: await getState(await getSavedObjectsClient(context)) })
   );
 
   router.put(
@@ -69,7 +55,7 @@ export const registerRoutes = (router: IRouter) => {
       validate: { body: simpleDefaultsSchema },
     },
     async (context, { body }, response) =>
-      response.ok({ body: await updateSimpleDefaults(await getClient(context), body) })
+      response.ok({ body: await updateSimpleDefaults(await getSavedObjectsClient(context), body) })
   );
 
   router.put(
@@ -79,6 +65,8 @@ export const registerRoutes = (router: IRouter) => {
       validate: { body: modeSchema },
     },
     async (context, { body: { mode } }, response) =>
-      response.ok({ body: await updateMode(await getClient(context), mode) })
+      response.ok({ body: await updateMode(await getSavedObjectsClient(context), mode) })
   );
+
+  registerPrototypeRoutes(router);
 };

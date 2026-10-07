@@ -9,11 +9,14 @@ export const PLUGIN_ID = 'boost';
 
 export const BOOST_SAVED_OBJECT_TYPE = 'boost_prototype';
 export const BOOST_SETTINGS_SAVED_OBJECT_ID = 'boost-settings';
+export const BOOST_SAMPLE_DATA_SAVED_OBJECT_ID = 'boost-sample-data';
 
 export const BOOST_API_BASE_PATH = '/internal/boost';
 export const BOOST_STATE_API_PATH = `${BOOST_API_BASE_PATH}/state`;
 export const BOOST_SIMPLE_DEFAULTS_API_PATH = `${BOOST_API_BASE_PATH}/simple_defaults`;
 export const BOOST_MODE_API_PATH = `${BOOST_API_BASE_PATH}/mode`;
+export const BOOST_SAMPLE_DATA_API_PATH = `${BOOST_API_BASE_PATH}/prototype/sample_data`;
+export const BOOST_RESTORE_API_PATH = `${BOOST_API_BASE_PATH}/prototype/restore`;
 
 export const READ_BOOST_PRIVILEGE = 'read_boost';
 export const MANAGE_BOOST_PRIVILEGE = 'manage_boost';

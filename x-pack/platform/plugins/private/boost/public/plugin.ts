@@ -7,7 +7,7 @@
 
 import type { CoreSetup, CoreStart, Plugin } from '@kbn/core/public';
 import type { ManagementAppMountParams } from '@kbn/management-plugin/public';
-import { PLUGIN_ID } from '../common/constants';
+import { BOOST_SAMPLE_DATA_API_PATH, PLUGIN_ID } from '../common/constants';
 import { BOOST_APP_TITLE } from './translations';
 import type { BoostSetupDependencies } from './types';
 
@@ -35,6 +35,11 @@ export class BoostPlugin implements Plugin<void, void, BoostSetupDependencies> {
     if (core.application.capabilities[PLUGIN_ID]?.save !== true) {
       return;
     }
+
+    // Seeds the prototype's sample indices and data streams the first time anyone who can manage
+    // boost loads Kibana; later loads are no-ops. Best effort: failures leave the project unseeded,
+    // and "Restore prototype defaults" reports errors if a user retries.
+    core.http.post(BOOST_SAMPLE_DATA_API_PATH).catch(() => {});
 
     // Core has no general header-button API for plugins, so the prototype menu borrows the AI button
     // slot. Registering synchronously here places it between the help menu and the AI agent button.

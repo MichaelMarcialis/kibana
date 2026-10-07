@@ -19,7 +19,7 @@ import {
 import type { HttpStart, NotificationsStart } from '@kbn/core/public';
 import { HeaderActionButton } from '@kbn/core-chrome-browser-components';
 import { i18n } from '@kbn/i18n';
-import { BOOST_STATE_API_PATH } from '../../common/constants';
+import { BOOST_RESTORE_API_PATH } from '../../common/constants';
 
 interface PrototypeMenuProps {
   http: HttpStart;
@@ -42,7 +42,7 @@ export const PrototypeMenu = ({ http, notifications, onRestored }: PrototypeMenu
   const onConfirmRestore = async () => {
     setIsRestoring(true);
     try {
-      await http.delete(BOOST_STATE_API_PATH);
+      await http.post(BOOST_RESTORE_API_PATH);
       onRestored();
     } catch (error) {
       notifications.toasts.addError(error, {
@@ -120,7 +120,7 @@ export const PrototypeMenu = ({ http, notifications, onRestored }: PrototypeMenu
           <p>
             {i18n.translate('xpack.boost.prototype.restoreModalBody', {
               defaultMessage:
-                'This discards all boost changes and returns the prototype to its out-of-the-box state for everyone using this deployment. The page reloads afterward.',
+                'This discards all boost changes and re-creates any missing sample indices and data streams, returning the prototype to its out-of-the-box state for everyone using this deployment. The page reloads afterward.',
             })}
           </p>
         </EuiConfirmModal>

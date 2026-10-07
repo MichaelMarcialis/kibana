@@ -16,6 +16,7 @@ const boostPrototypeSchemaV1 = schema.object(
       schema.literal('settings'),
       schema.literal('profile'),
       schema.literal('rule'),
+      schema.literal('sample_data'),
     ]),
   },
   { unknowns: 'allow' }
