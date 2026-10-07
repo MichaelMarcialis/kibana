@@ -40,6 +40,11 @@ export interface DataStreamsBoostProfile extends BoostProfileBase {
 
 export type BoostProfile = IndicesBoostProfile | DataStreamsBoostProfile;
 
+/** Profile payload for create and update requests; the server sets `is_builtin`. */
+export type BoostProfileInput =
+  | Omit<IndicesBoostProfile, 'is_builtin'>
+  | Omit<DataStreamsBoostProfile, 'is_builtin'>;
+
 export interface BoostRule {
   name: string;
   index_pattern: string;

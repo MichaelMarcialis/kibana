@@ -14,11 +14,28 @@ import {
   createDefaultRules,
   getEffectiveDefaults,
 } from '../../common/presets';
-import type { BoostMode, BoostSettings, BoostState, SimpleModeDefaults } from '../../common/types';
+import type {
+  BoostMode,
+  BoostProfile,
+  BoostProfileInput,
+  BoostSettings,
+  BoostState,
+  SimpleModeDefaults,
+} from '../../common/types';
+import { BoostRequestError } from './errors';
 
 type SettingsAttributes = Pick<BoostSettings, 'mode' | 'simple' | 'advanced'> & {
   kind: 'settings';
 };
+
+type ProfileAttributes = BoostProfileInput & { kind: 'profile' };
+
+const PROTOTYPE_KIND_FILTER = (kind: 'profile' | 'rule') =>
+  `${BOOST_SAVED_OBJECT_TYPE}.attributes.kind: ${kind}`;
+
+const profileId = (name: string) => `profile-${name}`;
+
+const BUILTIN_PROFILE_NAMES = BUILTIN_PROFILES.map(({ name }) => name);
 
 const DEFAULT_SETTINGS: BoostSettings = {
   mode: 'simple',
@@ -57,15 +74,109 @@ const saveSettings = async (
   });
 };
 
+const getCustomProfiles = async (client: SavedObjectsClientContract): Promise<BoostProfile[]> => {
+  const { saved_objects: savedObjects } = await client.find<ProfileAttributes>({
+    type: BOOST_SAVED_OBJECT_TYPE,
+    filter: PROTOTYPE_KIND_FILTER('profile'),
+    perPage: 1000,
+  });
+
+  return savedObjects
+    .map(({ attributes: { kind, ...profile } }) => ({ ...profile, is_builtin: false }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+};
+
 /** Returns the settings plus the profiles and rules they currently imply. */
 export const getState = async (client: SavedObjectsClientContract): Promise<BoostState> => {
-  const settings = await getSettings(client);
+  const [settings, customProfiles] = await Promise.all([
+    getSettings(client),
+    getCustomProfiles(client),
+  ]);
 
   return {
     settings,
-    profiles: [...BUILTIN_PROFILES],
+    profiles: [...BUILTIN_PROFILES, ...customProfiles],
     rules: createDefaultRules(getEffectiveDefaults(settings)),
   };
+};
+
+const saveProfile = async (
+  client: SavedObjectsClientContract,
+  profile: BoostProfileInput,
+  overwrite: boolean
+) => {
+  const attributes: ProfileAttributes = { kind: 'profile', ...profile };
+  await client.create(BOOST_SAVED_OBJECT_TYPE, attributes, {
+    id: profileId(profile.name),
+    overwrite,
+  });
+};
+
+const assertNotBuiltin = (name: string, action: string) => {
+  if (BUILTIN_PROFILE_NAMES.includes(name)) {
+    throw new BoostRequestError(400, `Built-in boost profile [${name}] cannot be ${action}.`);
+  }
+};
+
+const getCustomProfile = async (
+  client: SavedObjectsClientContract,
+  name: string
+): Promise<BoostProfileInput> => {
+  try {
+    const {
+      attributes: { kind, ...profile },
+    } = await client.get<ProfileAttributes>(BOOST_SAVED_OBJECT_TYPE, profileId(name));
+    return profile;
+  } catch (error) {
+    if (SavedObjectsErrorHelpers.isNotFoundError(error)) {
+      throw new BoostRequestError(404, `Boost profile [${name}] not found.`);
+    }
+    throw error;
+  }
+};
+
+export const createProfile = async (
+  client: SavedObjectsClientContract,
+  profile: BoostProfileInput
+): Promise<BoostState> => {
+  assertNotBuiltin(profile.name, 'replaced');
+  try {
+    await saveProfile(client, profile, false);
+  } catch (error) {
+    if (SavedObjectsErrorHelpers.isConflictError(error)) {
+      throw new BoostRequestError(409, `Boost profile [${profile.name}] already exists.`);
+    }
+    throw error;
+  }
+  return getState(client);
+};
+
+/** Replaces a custom profile. The name and type can't change. */
+export const updateProfile = async (
+  client: SavedObjectsClientContract,
+  name: string,
+  profile: BoostProfileInput
+): Promise<BoostState> => {
+  assertNotBuiltin(name, 'edited');
+  if (profile.name !== name) {
+    throw new BoostRequestError(400, 'A boost profile cannot be renamed.');
+  }
+  const { type } = await getCustomProfile(client, name);
+  if (type !== profile.type) {
+    throw new BoostRequestError(400, 'A boost profile type cannot be changed.');
+  }
+  await saveProfile(client, profile, true);
+  return getState(client);
+};
+
+export const deleteProfile = async (
+  client: SavedObjectsClientContract,
+  name: string
+): Promise<BoostState> => {
+  assertNotBuiltin(name, 'deleted');
+  await getCustomProfile(client, name);
+  await client.delete(BOOST_SAVED_OBJECT_TYPE, profileId(name));
+  return getState(client);
 };
 
 export const updateSimpleDefaults = async (
@@ -84,8 +195,15 @@ export const updateMode = async (
   return getState(client);
 };
 
-/** Deletes all stored prototype state, returning the project to its out-of-the-box defaults. */
+/** Deletes the settings and all custom profiles, returning the project to its out-of-the-box state. */
 export const resetState = async (client: SavedObjectsClientContract): Promise<BoostState> => {
+  const customProfiles = await getCustomProfiles(client);
+  if (customProfiles.length > 0) {
+    await client.bulkDelete(
+      customProfiles.map(({ name }) => ({ type: BOOST_SAVED_OBJECT_TYPE, id: profileId(name) }))
+    );
+  }
+
   try {
     await client.delete(BOOST_SAVED_OBJECT_TYPE, BOOST_SETTINGS_SAVED_OBJECT_ID);
   } catch (error) {

@@ -10,10 +10,16 @@ import { i18n } from '@kbn/i18n';
 import { useMutation, useQuery, useQueryClient } from '@kbn/react-query';
 import {
   BOOST_MODE_API_PATH,
+  BOOST_PROFILES_API_PATH,
   BOOST_SIMPLE_DEFAULTS_API_PATH,
   BOOST_STATE_API_PATH,
 } from '../../common/constants';
-import type { BoostMode, BoostState, SimpleModeDefaults } from '../../common/types';
+import type {
+  BoostMode,
+  BoostProfileInput,
+  BoostState,
+  SimpleModeDefaults,
+} from '../../common/types';
 import { useBoostServices } from './use_boost_services';
 
 const BOOST_STATE_QUERY_KEY = ['boost', 'state'] as const;
@@ -57,5 +63,34 @@ export const useUpdateMode = () =>
       http.put<BoostState>(BOOST_MODE_API_PATH, { body: JSON.stringify({ mode }) }),
     i18n.translate('xpack.boost.updateModeErrorTitle', {
       defaultMessage: 'Unable to switch boost mode',
+    })
+  );
+
+export const useCreateProfile = () =>
+  useBoostMutation(
+    (http, profile: BoostProfileInput) =>
+      http.post<BoostState>(BOOST_PROFILES_API_PATH, { body: JSON.stringify(profile) }),
+    i18n.translate('xpack.boost.createProfileErrorTitle', {
+      defaultMessage: 'Unable to create boost profile',
+    })
+  );
+
+export const useUpdateProfile = () =>
+  useBoostMutation(
+    (http, profile: BoostProfileInput) =>
+      http.put<BoostState>(`${BOOST_PROFILES_API_PATH}/${encodeURIComponent(profile.name)}`, {
+        body: JSON.stringify(profile),
+      }),
+    i18n.translate('xpack.boost.updateProfileErrorTitle', {
+      defaultMessage: 'Unable to save boost profile',
+    })
+  );
+
+export const useDeleteProfile = () =>
+  useBoostMutation(
+    (http, name: string) =>
+      http.delete<BoostState>(`${BOOST_PROFILES_API_PATH}/${encodeURIComponent(name)}`),
+    i18n.translate('xpack.boost.deleteProfileErrorTitle', {
+      defaultMessage: 'Unable to delete boost profile',
     })
   );

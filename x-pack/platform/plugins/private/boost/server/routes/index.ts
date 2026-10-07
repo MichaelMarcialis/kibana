@@ -16,6 +16,7 @@ import {
 } from '../../common/constants';
 import { getState, updateMode, updateSimpleDefaults } from '../lib/boost_store';
 import { getSavedObjectsClient } from './get_saved_objects_client';
+import { registerProfileRoutes } from './profiles';
 import { registerPrototypeRoutes } from './prototype';
 
 const simpleDefaultsSchema = schema.object({
@@ -68,5 +69,6 @@ export const registerRoutes = (router: IRouter) => {
       response.ok({ body: await updateMode(await getSavedObjectsClient(context), mode) })
   );
 
+  registerProfileRoutes(router);
   registerPrototypeRoutes(router);
 };
