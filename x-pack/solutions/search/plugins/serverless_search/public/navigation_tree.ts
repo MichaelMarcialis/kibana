@@ -164,7 +164,7 @@ export function createNavigationTree({
           {
             children: [
               { link: 'management:index_management', breadcrumbStatus: 'hidden' },
-              { link: 'management:boost', breadcrumbStatus: 'hidden' },
+              { link: 'management:boost', breadcrumbStatus: 'hidden', badgeType: 'new' },
               { link: 'management:index_lifecycle_management', breadcrumbStatus: 'hidden' },
               { link: 'management:snapshot_restore', breadcrumbStatus: 'hidden' },
               { link: 'management:transform', breadcrumbStatus: 'hidden' },
