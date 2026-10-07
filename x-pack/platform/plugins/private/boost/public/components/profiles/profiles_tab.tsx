@@ -163,7 +163,7 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
     {
       field: 'ruleCount',
       name: i18n.translate('xpack.boost.profilesTab.rulesColumn', { defaultMessage: 'Rules' }),
-      width: '8%',
+      width: '12%',
       sortable: true,
       dataType: 'number',
     },
@@ -172,7 +172,7 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       name: i18n.translate('xpack.boost.profilesTab.minBoostColumn', {
         defaultMessage: 'Min boost',
       }),
-      width: '10%',
+      width: '12%',
       sortable: true,
       dataType: 'number',
       render: formatBoost,
@@ -182,7 +182,7 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       name: i18n.translate('xpack.boost.profilesTab.maxBoostColumn', {
         defaultMessage: 'Max boost',
       }),
-      width: '10%',
+      width: '12%',
       sortable: true,
       dataType: 'number',
       render: formatBoost,
