@@ -26,6 +26,7 @@ import type { DataStreamsWindowId, IndicesPresetId, SimpleModeDefaults } from '.
 import { useBoostServices } from '../hooks/use_boost_services';
 import { useUpdateSimpleDefaults } from '../hooks/use_boost_state';
 import { PresetCards } from './preset_cards';
+import { TitleWithIcon } from './title_with_icon';
 import { DATA_STREAMS_WINDOW_OPTIONS, INDICES_PRESET_OPTIONS } from './preset_options';
 
 interface SimpleModeSettingsProps {
@@ -111,9 +112,11 @@ export const SimpleModeSettings = ({
             titleSize="xs"
             title={
               <h2>
-                {i18n.translate('xpack.boost.simpleMode.indicesTitle', {
-                  defaultMessage: 'Indices',
-                })}
+                <TitleWithIcon iconType="table">
+                  {i18n.translate('xpack.boost.simpleMode.indicesTitle', {
+                    defaultMessage: 'Indices',
+                  })}
+                </TitleWithIcon>
               </h2>
             }
             description={
@@ -148,9 +151,11 @@ export const SimpleModeSettings = ({
             titleSize="xs"
             title={
               <h2>
-                {i18n.translate('xpack.boost.simpleMode.dataStreamsTitle', {
-                  defaultMessage: 'Data streams',
-                })}
+                <TitleWithIcon iconType="productStreamsClassic">
+                  {i18n.translate('xpack.boost.simpleMode.dataStreamsTitle', {
+                    defaultMessage: 'Data streams',
+                  })}
+                </TitleWithIcon>
               </h2>
             }
             description={
