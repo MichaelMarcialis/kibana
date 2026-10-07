@@ -21,6 +21,3 @@ export const MANAGE_BOOST_PRIVILEGE = 'manage_boost';
 // Bounds enforced by the Elasticsearch `_boost` API.
 export const MIN_BOOST = 0;
 export const MAX_BOOST = 5000;
-
-export const CUSTOM_WINDOW_MIN_DAYS = 1;
-export const CUSTOM_WINDOW_MAX_DAYS = 180;

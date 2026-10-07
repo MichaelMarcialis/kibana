@@ -17,14 +17,9 @@ export interface BoostPeriod {
   max_age?: string;
 }
 
-export interface BoostProfileMeta {
-  managed_by?: 'simple_mode';
-}
-
 interface BoostProfileBase {
   name: string;
   is_builtin: boolean;
-  _meta?: BoostProfileMeta;
 }
 
 export interface IndicesBoostProfile extends BoostProfileBase {
@@ -57,13 +52,12 @@ export type BoostMode = 'simple' | 'advanced';
 
 export type IndicesPresetId = 'on_demand' | 'performant' | 'high_availability';
 
-export type DataStreamsWindowId = 'last_1_day' | 'last_7_days' | 'custom';
+export type DataStreamsWindowId = 'last_1_day' | 'last_3_days' | 'last_7_days';
 
 export interface SimpleModeDefaults {
   indices: IndicesPresetId;
   data_streams: {
     window: DataStreamsWindowId;
-    custom_days: number;
   };
 }
 

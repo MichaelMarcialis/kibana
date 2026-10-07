@@ -33,7 +33,7 @@ const columns: Array<EuiBasicTableColumn<BoostProfile>> = [
   {
     field: 'name',
     name: i18n.translate('xpack.boost.profilesTable.nameColumn', { defaultMessage: 'Name' }),
-    render: (name: string, { is_builtin: isBuiltin, _meta: meta }: BoostProfile) => (
+    render: (name: string, { is_builtin: isBuiltin }: BoostProfile) => (
       <EuiFlexGroup gutterSize="s" alignItems="center" responsive={false} wrap>
         <EuiFlexItem grow={false}>{name}</EuiFlexItem>
         {isBuiltin && (
@@ -41,15 +41,6 @@ const columns: Array<EuiBasicTableColumn<BoostProfile>> = [
             <EuiBadge color="hollow">
               {i18n.translate('xpack.boost.profilesTable.elasticBadge', {
                 defaultMessage: 'Elastic',
-              })}
-            </EuiBadge>
-          </EuiFlexItem>
-        )}
-        {meta?.managed_by === 'simple_mode' && (
-          <EuiFlexItem grow={false}>
-            <EuiBadge color="hollow">
-              {i18n.translate('xpack.boost.profilesTable.simpleModeBadge', {
-                defaultMessage: 'Simple mode',
               })}
             </EuiBadge>
           </EuiFlexItem>

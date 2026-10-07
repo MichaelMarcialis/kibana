@@ -13,6 +13,7 @@ import type {
   BoostRule,
   BoostSettings,
   DataStreamsBoostProfile,
+  DataStreamsWindowId,
   IndicesPresetId,
   SimpleModeDefaults,
 } from './types';
@@ -23,20 +24,18 @@ export const BUILTIN_INDICES_PROFILE_NAMES: Readonly<Record<IndicesPresetId, str
   high_availability: 'elastic-high-availability',
 };
 
-export const BUILTIN_DATA_STREAMS_PROFILE_NAMES = {
+export const BUILTIN_DATA_STREAMS_PROFILE_NAMES: Readonly<Record<DataStreamsWindowId, string>> = {
   last_1_day: 'elastic-last-1-day',
+  last_3_days: 'elastic-last-3-days',
   last_7_days: 'elastic-last-7-days',
-} as const;
-
-/** Profile that simple mode creates and updates when a custom data stream window is chosen. */
-export const CUSTOM_WINDOW_PROFILE_NAME = 'simple-mode-custom-window';
+};
 
 export const DEFAULT_INDICES_RULE_NAME = 'elastic-default-indices';
 export const DEFAULT_DATA_STREAMS_RULE_NAME = 'elastic-default-data-streams';
 
 export const DEFAULT_SIMPLE_MODE_DEFAULTS: SimpleModeDefaults = {
   indices: 'performant',
-  data_streams: { window: 'last_7_days', custom_days: 30 },
+  data_streams: { window: 'last_7_days' },
 };
 
 const createWindowPeriods = (
@@ -52,7 +51,8 @@ const createWindowPeriods = (
 };
 
 // Boost values are placeholders pending pricing review. Indices presets follow the ES3 Search Power
-// cutover mapping, capped at the API maximum; data stream presets reproduce the Search Boost Window.
+// cutover mapping, capped at the API maximum; data stream windows (1, 3, or 7 days) are also subject
+// to change.
 export const BUILTIN_PROFILES: readonly BoostProfile[] = [
   {
     name: BUILTIN_INDICES_PROFILE_NAMES.on_demand,
@@ -91,6 +91,12 @@ export const BUILTIN_PROFILES: readonly BoostProfile[] = [
     ...createWindowPeriods('1d'),
   },
   {
+    name: BUILTIN_DATA_STREAMS_PROFILE_NAMES.last_3_days,
+    type: 'data_streams',
+    is_builtin: true,
+    ...createWindowPeriods('3d'),
+  },
+  {
     name: BUILTIN_DATA_STREAMS_PROFILE_NAMES.last_7_days,
     type: 'data_streams',
     is_builtin: true,
@@ -98,24 +104,13 @@ export const BUILTIN_PROFILES: readonly BoostProfile[] = [
   },
 ];
 
-export const createCustomWindowProfile = (days: number): DataStreamsBoostProfile => ({
-  name: CUSTOM_WINDOW_PROFILE_NAME,
-  type: 'data_streams',
-  is_builtin: false,
-  _meta: { managed_by: 'simple_mode' },
-  ...createWindowPeriods(`${days}d`),
-});
-
 /** Translates simple-mode defaults into the profiles referenced by the two default rules. */
 export const translateSimpleDefaults = ({
   indices,
   data_streams: dataStreams,
 }: SimpleModeDefaults): AdvancedModeDefaults => ({
   indices_profile: BUILTIN_INDICES_PROFILE_NAMES[indices],
-  data_streams_profile:
-    dataStreams.window === 'custom'
-      ? CUSTOM_WINDOW_PROFILE_NAME
-      : BUILTIN_DATA_STREAMS_PROFILE_NAMES[dataStreams.window],
+  data_streams_profile: BUILTIN_DATA_STREAMS_PROFILE_NAMES[dataStreams.window],
 });
 
 /** Returns the profiles the default rules reference in the current mode. */
@@ -145,9 +140,3 @@ export const createDefaultRules = ({
     is_builtin: true,
   },
 ];
-
-/** Returns the built-in profiles plus the simple-mode custom window profile when it is in use. */
-export const getAvailableProfiles = ({ simple }: BoostSettings): BoostProfile[] =>
-  simple.data_streams.window === 'custom'
-    ? [...BUILTIN_PROFILES, createCustomWindowProfile(simple.data_streams.custom_days)]
-    : [...BUILTIN_PROFILES];

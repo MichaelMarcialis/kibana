@@ -63,6 +63,16 @@ export const DATA_STREAMS_WINDOW_OPTIONS: ReadonlyArray<PresetOption<DataStreams
     isDefault: false,
   },
   {
+    id: 'last_3_days',
+    label: i18n.translate('xpack.boost.presets.last3Days.label', {
+      defaultMessage: 'Last 3 days',
+    }),
+    description: i18n.translate('xpack.boost.presets.last3Days.description', {
+      defaultMessage: 'The most recent 3 days of each data stream are kept search-ready.',
+    }),
+    isDefault: false,
+  },
+  {
     id: 'last_7_days',
     label: i18n.translate('xpack.boost.presets.last7Days.label', {
       defaultMessage: 'Last 7 days',
@@ -71,15 +81,5 @@ export const DATA_STREAMS_WINDOW_OPTIONS: ReadonlyArray<PresetOption<DataStreams
       defaultMessage: 'The most recent week of each data stream is kept search-ready.',
     }),
     isDefault: true,
-  },
-  {
-    id: 'custom',
-    label: i18n.translate('xpack.boost.presets.customWindow.label', {
-      defaultMessage: 'Custom',
-    }),
-    description: i18n.translate('xpack.boost.presets.customWindow.description', {
-      defaultMessage: 'Choose how many days of recent data are kept search-ready.',
-    }),
-    isDefault: false,
   },
 ];

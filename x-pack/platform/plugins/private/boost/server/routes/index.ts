@@ -12,8 +12,6 @@ import {
   BOOST_SAVED_OBJECT_TYPE,
   BOOST_SIMPLE_DEFAULTS_API_PATH,
   BOOST_STATE_API_PATH,
-  CUSTOM_WINDOW_MAX_DAYS,
-  CUSTOM_WINDOW_MIN_DAYS,
   MANAGE_BOOST_PRIVILEGE,
   READ_BOOST_PRIVILEGE,
 } from '../../common/constants';
@@ -28,14 +26,9 @@ const simpleDefaultsSchema = schema.object({
   data_streams: schema.object({
     window: schema.oneOf([
       schema.literal('last_1_day'),
+      schema.literal('last_3_days'),
       schema.literal('last_7_days'),
-      schema.literal('custom'),
     ]),
-    custom_days: schema.number({
-      min: CUSTOM_WINDOW_MIN_DAYS,
-      max: CUSTOM_WINDOW_MAX_DAYS,
-      validate: (value) => (Number.isInteger(value) ? undefined : 'must be a whole number of days'),
-    }),
   }),
 });
 

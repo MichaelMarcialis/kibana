@@ -6,10 +6,11 @@
  */
 
 import {
-  CUSTOM_WINDOW_PROFILE_NAME,
+  BUILTIN_DATA_STREAMS_PROFILE_NAMES,
+  BUILTIN_INDICES_PROFILE_NAMES,
+  BUILTIN_PROFILES,
   DEFAULT_SIMPLE_MODE_DEFAULTS,
   createDefaultRules,
-  getAvailableProfiles,
   getEffectiveDefaults,
   translateSimpleDefaults,
 } from './presets';
@@ -22,23 +23,33 @@ const simpleSettings: BoostSettings = {
 };
 
 describe('translateSimpleDefaults', () => {
-  it('maps presets to built-in profiles', () => {
+  it('maps the out-of-the-box defaults to built-in profiles', () => {
     expect(translateSimpleDefaults(DEFAULT_SIMPLE_MODE_DEFAULTS)).toEqual({
       indices_profile: 'elastic-performant',
       data_streams_profile: 'elastic-last-7-days',
     });
   });
 
-  it('maps a custom window to the simple-mode managed profile', () => {
+  it('maps every data stream window to its own built-in profile', () => {
     expect(
-      translateSimpleDefaults({
-        indices: 'on_demand',
-        data_streams: { window: 'custom', custom_days: 45 },
-      })
+      translateSimpleDefaults({ indices: 'on_demand', data_streams: { window: 'last_3_days' } })
     ).toEqual({
       indices_profile: 'elastic-on-demand',
-      data_streams_profile: CUSTOM_WINDOW_PROFILE_NAME,
+      data_streams_profile: 'elastic-last-3-days',
     });
+  });
+});
+
+describe('BUILTIN_PROFILES', () => {
+  it('includes one built-in profile for every simple-mode option', () => {
+    const builtinNames = BUILTIN_PROFILES.map(({ name }) => name);
+
+    expect(builtinNames).toEqual(
+      expect.arrayContaining([
+        ...Object.values(BUILTIN_INDICES_PROFILE_NAMES),
+        ...Object.values(BUILTIN_DATA_STREAMS_PROFILE_NAMES),
+      ])
+    );
   });
 });
 
@@ -74,23 +85,5 @@ describe('createDefaultRules', () => {
       ['*', 0],
       ['*', 0],
     ]);
-  });
-});
-
-describe('getAvailableProfiles', () => {
-  it('includes the custom window profile only when a custom window is selected', () => {
-    const names = (settings: BoostSettings) =>
-      getAvailableProfiles(settings).map(({ name }) => name);
-
-    expect(names(simpleSettings)).not.toContain(CUSTOM_WINDOW_PROFILE_NAME);
-    expect(
-      names({
-        ...simpleSettings,
-        simple: {
-          ...DEFAULT_SIMPLE_MODE_DEFAULTS,
-          data_streams: { window: 'custom', custom_days: 30 },
-        },
-      })
-    ).toContain(CUSTOM_WINDOW_PROFILE_NAME);
   });
 });

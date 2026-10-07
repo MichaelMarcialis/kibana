@@ -9,9 +9,9 @@ import type { SavedObjectsClientContract } from '@kbn/core/server';
 import { SavedObjectsErrorHelpers } from '@kbn/core/server';
 import { BOOST_SAVED_OBJECT_TYPE, BOOST_SETTINGS_SAVED_OBJECT_ID } from '../../common/constants';
 import {
+  BUILTIN_PROFILES,
   DEFAULT_SIMPLE_MODE_DEFAULTS,
   createDefaultRules,
-  getAvailableProfiles,
   getEffectiveDefaults,
 } from '../../common/presets';
 import type { BoostMode, BoostSettings, BoostState, SimpleModeDefaults } from '../../common/types';
@@ -63,7 +63,7 @@ export const getState = async (client: SavedObjectsClientContract): Promise<Boos
 
   return {
     settings,
-    profiles: getAvailableProfiles(settings),
+    profiles: [...BUILTIN_PROFILES],
     rules: createDefaultRules(getEffectiveDefaults(settings)),
   };
 };

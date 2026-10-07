@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import React, { type ReactNode } from 'react';
+import React from 'react';
 import {
   EuiBadge,
   EuiCheckableCard,
@@ -25,8 +25,6 @@ interface PresetCardsProps<TId extends string> {
   selectedId: TId;
   onChange: (id: TId) => void;
   disabled: boolean;
-  /** Extra content rendered inside an option's card while that option is selected. */
-  selectedOptionContent?: Partial<Record<TId, ReactNode>>;
 }
 
 const DEFAULT_BADGE_LABEL = i18n.translate('xpack.boost.presets.defaultBadge', {
@@ -41,7 +39,6 @@ export const PresetCards = <TId extends string>({
   selectedId,
   onChange,
   disabled,
-  selectedOptionContent,
 }: PresetCardsProps<TId>) => {
   const groupId = useGeneratedHtmlId({ prefix: name });
 
@@ -77,9 +74,7 @@ export const PresetCards = <TId extends string>({
               onChange={() => onChange(id)}
               disabled={disabled}
               data-test-subj={`${name}Preset-${id}`}
-            >
-              {selectedId === id ? selectedOptionContent?.[id] : undefined}
-            </EuiCheckableCard>
+            />
           </EuiFlexItem>
         ))}
       </EuiFlexGroup>
