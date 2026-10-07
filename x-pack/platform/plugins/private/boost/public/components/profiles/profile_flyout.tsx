@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import {
   EuiButton,
   EuiButtonEmpty,
+  EuiCheckableCard,
   EuiFieldNumber,
   EuiFieldText,
   EuiFlexGroup,
@@ -19,7 +20,6 @@ import {
   EuiFlyoutHeader,
   EuiFormRow,
   EuiSpacer,
-  EuiSwitch,
   EuiText,
   EuiTitle,
   useGeneratedHtmlId,
@@ -30,6 +30,7 @@ import type { BoostProfile, BoostProfileType } from '../../../common/types';
 import type { BoostRangeError, MaxAgeError } from '../../../common/validation';
 import { useBoostServices } from '../../hooks/use_boost_services';
 import { useCreateProfile, useUpdateProfile } from '../../hooks/use_boost_state';
+import { CardLabel } from '../card_label';
 import { PresetCards } from '../preset_cards';
 import type { PresetOption } from '../preset_options';
 import type { BoostRangeDraft, ProfileDraft } from './profile_draft';
@@ -91,6 +92,37 @@ const TYPE_OPTIONS: ReadonlyArray<PresetOption<BoostProfileType>> = [
   },
 ];
 
+const INDEX_OPTIONS: ReadonlyArray<{
+  key: 'extraCopy' | 'prewarm' | 'pinned';
+  title: string;
+  description: string;
+}> = [
+  {
+    key: 'extraCopy',
+    title: i18n.translate('xpack.boost.profileForm.extraCopyTitle', {
+      defaultMessage: 'One extra copy',
+    }),
+    description: i18n.translate('xpack.boost.profileForm.extraCopyDescription', {
+      defaultMessage:
+        "Keep an additional copy of the data so search isn't affected if one copy becomes unavailable.",
+    }),
+  },
+  {
+    key: 'prewarm',
+    title: i18n.translate('xpack.boost.profileForm.prewarmTitle', { defaultMessage: 'Prewarm' }),
+    description: i18n.translate('xpack.boost.profileForm.prewarmDescription', {
+      defaultMessage: "Load data into cache ahead of time so the first query doesn't wait.",
+    }),
+  },
+  {
+    key: 'pinned',
+    title: i18n.translate('xpack.boost.profileForm.pinTitle', { defaultMessage: 'Pin' }),
+    description: i18n.translate('xpack.boost.profileForm.pinDescription', {
+      defaultMessage: "Don't evict cached data.",
+    }),
+  },
+];
+
 const BOOST_HINT = i18n.translate('xpack.boost.profileForm.boostHint', {
   defaultMessage: '{min} to {max}',
   values: { min: MIN_BOOST, max: MAX_BOOST.toLocaleString(i18n.getLocale()) },
@@ -125,6 +157,7 @@ const BoostRangeFields = ({
     <EuiFlexGroup gutterSize="m">
       <EuiFlexItem>
         <EuiFormRow
+          display="rowCompressed"
           label={i18n.translate('xpack.boost.profileForm.minBoostLabel', {
             defaultMessage: 'Minimum boost',
           })}
@@ -133,6 +166,7 @@ const BoostRangeFields = ({
           error={minError}
         >
           <EuiFieldNumber
+            compressed
             value={range.minBoost}
             onChange={({ target: { value } }) => onChange({ ...range, minBoost: value })}
             min={MIN_BOOST}
@@ -146,6 +180,7 @@ const BoostRangeFields = ({
       </EuiFlexItem>
       <EuiFlexItem>
         <EuiFormRow
+          display="rowCompressed"
           label={i18n.translate('xpack.boost.profileForm.maxBoostLabel', {
             defaultMessage: 'Maximum boost',
           })}
@@ -154,6 +189,7 @@ const BoostRangeFields = ({
           error={maxError}
         >
           <EuiFieldNumber
+            compressed
             value={range.maxBoost}
             onChange={({ target: { value } }) => onChange({ ...range, maxBoost: value })}
             min={MIN_BOOST}
@@ -168,6 +204,7 @@ const BoostRangeFields = ({
       {maxAge && (
         <EuiFlexItem>
           <EuiFormRow
+            display="rowCompressed"
             label={i18n.translate('xpack.boost.profileForm.maxAgeLabel', {
               defaultMessage: 'Max age',
             })}
@@ -175,6 +212,7 @@ const BoostRangeFields = ({
             error={maxAgeError}
           >
             <EuiFieldNumber
+              compressed
               value={maxAge.days}
               onChange={({ target: { value } }) => maxAge.onChange(value)}
               min={1}
@@ -211,6 +249,7 @@ export const ProfileFlyout = ({
 }: ProfileFlyoutProps) => {
   const { notifications } = useBoostServices();
   const titleId = useGeneratedHtmlId();
+  const optionsId = useGeneratedHtmlId({ prefix: 'boostProfileOptions' });
   const isEditing = profile !== undefined;
 
   const [draft, setDraft] = useState<ProfileDraft>(() =>
@@ -256,9 +295,9 @@ export const ProfileFlyout = ({
   if (savedProfileName) {
     // Placeholder for the rule step, which arrives with the Boost rules tab.
     return (
-      <EuiFlyout onClose={onClose} size="m" aria-labelledby={titleId} ownFocus>
+      <EuiFlyout onClose={onClose} size="m" paddingSize="m" aria-labelledby={titleId} ownFocus>
         <EuiFlyoutHeader hasBorder>
-          <EuiTitle size="m">
+          <EuiTitle size="s">
             <h2 id={titleId}>
               {i18n.translate('xpack.boost.profileForm.createRuleTitle', {
                 defaultMessage: 'Create boost rule',
@@ -278,7 +317,7 @@ export const ProfileFlyout = ({
           </EuiText>
         </EuiFlyoutBody>
         <EuiFlyoutFooter>
-          <EuiButtonEmpty onClick={onClose} flush="left">
+          <EuiButtonEmpty size="s" onClick={onClose} flush="left">
             {i18n.translate('xpack.boost.profileForm.closeButton', { defaultMessage: 'Close' })}
           </EuiButtonEmpty>
         </EuiFlyoutFooter>
@@ -292,12 +331,13 @@ export const ProfileFlyout = ({
     <EuiFlyout
       onClose={onClose}
       size="m"
+      paddingSize="m"
       aria-labelledby={titleId}
       ownFocus
       data-test-subj="boostProfileFlyout"
     >
       <EuiFlyoutHeader hasBorder>
-        <EuiTitle size="m">
+        <EuiTitle size="s">
           <h2 id={titleId}>
             {isEditing
               ? i18n.translate('xpack.boost.profileForm.editTitle', {
@@ -316,6 +356,7 @@ export const ProfileFlyout = ({
 
       <EuiFlyoutBody>
         <EuiFormRow
+          display="rowCompressed"
           label={i18n.translate('xpack.boost.profileForm.nameLabel', { defaultMessage: 'Name' })}
           helpText={
             isEditing
@@ -331,6 +372,7 @@ export const ProfileFlyout = ({
           fullWidth
         >
           <EuiFieldText
+            compressed
             value={draft.name}
             onChange={({ target: { value } }) => updateDraft({ name: value })}
             isInvalid={Boolean(nameError)}
@@ -340,33 +382,23 @@ export const ProfileFlyout = ({
           />
         </EuiFormRow>
 
-        <EuiSpacer size="l" />
-        <EuiTitle size="xs">
-          <h3>{i18n.translate('xpack.boost.profileForm.typeTitle', { defaultMessage: 'Type' })}</h3>
-        </EuiTitle>
-        <EuiText size="xs" color="subdued">
-          <p>
-            {isEditing
-              ? i18n.translate('xpack.boost.profileForm.typeLockedHelp', {
-                  defaultMessage: "The type can't be changed after the profile is created.",
-                })
-              : i18n.translate('xpack.boost.profileForm.typeHelp', {
-                  defaultMessage:
-                    'Index profiles and data stream profiles have different settings, so a profile applies to one or the other.',
-                })}
-          </p>
-        </EuiText>
-        <EuiSpacer size="s" />
-        <PresetCards
-          name="boostProfileType"
-          legend={i18n.translate('xpack.boost.profileForm.typeLegend', {
-            defaultMessage: 'Profile type',
+        <EuiFormRow
+          display="rowCompressed"
+          labelType="legend"
+          label={i18n.translate('xpack.boost.profileForm.typeLabel', { defaultMessage: 'Type' })}
+          helpText={i18n.translate('xpack.boost.profileForm.typeHelp', {
+            defaultMessage: "The type can't be changed after the profile is created.",
           })}
-          options={TYPE_OPTIONS}
-          selectedId={draft.type}
-          onChange={(type) => updateDraft({ type })}
-          disabled={isEditing || isSaving}
-        />
+          fullWidth
+        >
+          <PresetCards
+            name="boostProfileType"
+            options={TYPE_OPTIONS}
+            selectedId={draft.type}
+            onChange={(type) => updateDraft({ type })}
+            disabled={isEditing || isSaving}
+          />
+        </EuiFormRow>
 
         <EuiSpacer size="l" />
         <EuiTitle size="xs">
@@ -394,61 +426,31 @@ export const ProfileFlyout = ({
               testSubjPrefix="indices"
             />
             <EuiSpacer size="l" />
-            <EuiTitle size="xs">
-              <h3>
-                {i18n.translate('xpack.boost.profileForm.optionsTitle', {
-                  defaultMessage: 'Additional options',
-                })}
-              </h3>
-            </EuiTitle>
-            <EuiSpacer size="s" />
             <EuiFormRow
-              label={i18n.translate('xpack.boost.profileForm.highAvailabilityLabel', {
-                defaultMessage: 'High availability',
+              display="rowCompressed"
+              labelType="legend"
+              label={i18n.translate('xpack.boost.profileForm.optionsLabel', {
+                defaultMessage: 'Additional options',
               })}
+              fullWidth
             >
-              <EuiSwitch
-                label={i18n.translate('xpack.boost.profileForm.extraCopySwitch', {
-                  defaultMessage:
-                    "Extra copy: keep an additional copy so search isn't affected if one copy becomes unavailable",
-                })}
-                checked={indices.extraCopy}
-                onChange={({ target: { checked } }) =>
-                  updateDraft({ indices: { ...indices, extraCopy: checked } })
-                }
-                disabled={isSaving}
-              />
-            </EuiFormRow>
-            <EuiFormRow
-              label={i18n.translate('xpack.boost.profileForm.prewarmLabel', {
-                defaultMessage: 'Prewarm',
-              })}
-            >
-              <EuiSwitch
-                label={i18n.translate('xpack.boost.profileForm.prewarmSwitch', {
-                  defaultMessage:
-                    "Load data into cache ahead of time so the first query doesn't wait",
-                })}
-                checked={indices.prewarm}
-                onChange={({ target: { checked } }) =>
-                  updateDraft({ indices: { ...indices, prewarm: checked } })
-                }
-                disabled={isSaving}
-              />
-            </EuiFormRow>
-            <EuiFormRow
-              label={i18n.translate('xpack.boost.profileForm.pinLabel', { defaultMessage: 'Pin' })}
-            >
-              <EuiSwitch
-                label={i18n.translate('xpack.boost.profileForm.pinSwitch', {
-                  defaultMessage: "Don't evict cached data",
-                })}
-                checked={indices.pinned}
-                onChange={({ target: { checked } }) =>
-                  updateDraft({ indices: { ...indices, pinned: checked } })
-                }
-                disabled={isSaving}
-              />
+              <EuiFlexGroup direction="column" gutterSize="s">
+                {INDEX_OPTIONS.map(({ key, title, description }) => (
+                  <EuiFlexItem key={key}>
+                    <EuiCheckableCard
+                      id={`${optionsId}-${key}`}
+                      checkableType="checkbox"
+                      label={<CardLabel title={title} description={description} />}
+                      checked={indices[key]}
+                      onChange={() =>
+                        updateDraft({ indices: { ...indices, [key]: !indices[key] } })
+                      }
+                      disabled={isSaving}
+                      data-test-subj={`boostProfileOption-${key}`}
+                    />
+                  </EuiFlexItem>
+                ))}
+              </EuiFlexGroup>
             </EuiFormRow>
           </>
         ) : (
@@ -539,7 +541,12 @@ export const ProfileFlyout = ({
       <EuiFlyoutFooter>
         <EuiFlexGroup justifyContent="spaceBetween" responsive={false}>
           <EuiFlexItem grow={false}>
-            <EuiButtonEmpty onClick={onClose} flush="left" data-test-subj="boostProfileCancel">
+            <EuiButtonEmpty
+              size="s"
+              onClick={onClose}
+              flush="left"
+              data-test-subj="boostProfileCancel"
+            >
               {i18n.translate('xpack.boost.profileForm.cancelButton', {
                 defaultMessage: 'Cancel',
               })}
@@ -550,6 +557,7 @@ export const ProfileFlyout = ({
               {isEditing ? (
                 <EuiFlexItem grow={false}>
                   <EuiButton
+                    size="s"
                     fill
                     onClick={() => onSave(false)}
                     isLoading={isSaving}
@@ -564,6 +572,7 @@ export const ProfileFlyout = ({
                 <>
                   <EuiFlexItem grow={false}>
                     <EuiButton
+                      size="s"
                       onClick={() => onSave(false)}
                       isLoading={isSaving}
                       data-test-subj="boostProfileSave"
@@ -575,6 +584,7 @@ export const ProfileFlyout = ({
                   </EuiFlexItem>
                   <EuiFlexItem grow={false}>
                     <EuiButton
+                      size="s"
                       fill
                       onClick={() => onSave(true)}
                       isLoading={isSaving}

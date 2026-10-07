@@ -11,16 +11,16 @@ import {
   EuiCheckableCard,
   EuiFlexGroup,
   EuiFlexItem,
-  EuiSpacer,
-  EuiText,
   useGeneratedHtmlId,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
+import { CardLabel } from './card_label';
 import type { PresetOption } from './preset_options';
 
 interface PresetCardsProps<TId extends string> {
   name: string;
-  legend: string;
+  /** Accessible name for the radio group. Omit when a parent already provides a legend. */
+  legend?: string;
   options: ReadonlyArray<PresetOption<TId>>;
   selectedId: TId;
   onChange: (id: TId) => void;
@@ -42,42 +42,29 @@ export const PresetCards = <TId extends string>({
 }: PresetCardsProps<TId>) => {
   const groupId = useGeneratedHtmlId({ prefix: name });
 
-  return (
-    <fieldset aria-label={legend}>
-      <EuiFlexGroup direction="column" gutterSize="s" data-test-subj={`${name}PresetCards`}>
-        {options.map(({ id, label, description, isDefault }) => (
-          <EuiFlexItem key={id}>
-            <EuiCheckableCard
-              id={`${groupId}-${id}`}
-              name={groupId}
-              // The description lives in the label because EUI separates card children from the
-              // label with a fixed 16px gap; this keeps title and description 4px apart.
-              label={
-                <>
-                  <EuiFlexGroup gutterSize="s" alignItems="center" responsive={false}>
-                    <EuiFlexItem grow={false}>
-                      <strong>{label}</strong>
-                    </EuiFlexItem>
-                    {isDefault && (
-                      <EuiFlexItem grow={false}>
-                        <EuiBadge>{DEFAULT_BADGE_LABEL}</EuiBadge>
-                      </EuiFlexItem>
-                    )}
-                  </EuiFlexGroup>
-                  <EuiSpacer size="xs" />
-                  <EuiText size="xs" color="subdued">
-                    {description}
-                  </EuiText>
-                </>
-              }
-              checked={selectedId === id}
-              onChange={() => onChange(id)}
-              disabled={disabled}
-              data-test-subj={`${name}Preset-${id}`}
-            />
-          </EuiFlexItem>
-        ))}
-      </EuiFlexGroup>
-    </fieldset>
+  const cards = (
+    <EuiFlexGroup direction="column" gutterSize="s" data-test-subj={`${name}PresetCards`}>
+      {options.map(({ id, label, description, isDefault }) => (
+        <EuiFlexItem key={id}>
+          <EuiCheckableCard
+            id={`${groupId}-${id}`}
+            name={groupId}
+            label={
+              <CardLabel
+                title={label}
+                description={description}
+                badge={isDefault ? <EuiBadge>{DEFAULT_BADGE_LABEL}</EuiBadge> : undefined}
+              />
+            }
+            checked={selectedId === id}
+            onChange={() => onChange(id)}
+            disabled={disabled}
+            data-test-subj={`${name}Preset-${id}`}
+          />
+        </EuiFlexItem>
+      ))}
+    </EuiFlexGroup>
   );
+
+  return legend ? <fieldset aria-label={legend}>{cards}</fieldset> : cards;
 };
