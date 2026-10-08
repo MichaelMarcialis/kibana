@@ -10,7 +10,6 @@ import {
   EuiButton,
   EuiButtonEmpty,
   EuiCheckableCard,
-  EuiFieldNumber,
   EuiFieldText,
   EuiFlexGroup,
   EuiFlexItem,
@@ -27,16 +26,15 @@ import {
 import { i18n } from '@kbn/i18n';
 import { MAX_BOOST, MIN_BOOST } from '../../../common/constants';
 import type { BoostProfile, BoostProfileType } from '../../../common/types';
-import type { BoostRangeError, MaxAgeError } from '../../../common/validation';
 import { useBoostServices } from '../../hooks/use_boost_services';
 import { useCreateProfile, useUpdateProfile } from '../../hooks/use_boost_state';
 import { CardLabel } from '../card_label';
 import { PresetCards } from '../preset_cards';
 import type { PresetOption } from '../preset_options';
 import { BoostRangeInputs } from './boost_range_inputs';
-import { FormSection } from './form_section';
+import { FormSection, FormSubsection } from './form_section';
 import { FullWidthDivider } from './full_width_divider';
-import type { BoostRangeDraft, ProfileDraft } from './profile_draft';
+import type { AgedPeriodDraft, ProfileDraft } from './profile_draft';
 import {
   createEmptyDraft,
   draftFromProfile,
@@ -46,11 +44,7 @@ import {
   getDraftEstimate,
   hasDraftErrors,
 } from './profile_draft';
-import {
-  BOOST_RANGE_ERROR_MESSAGES,
-  MAX_AGE_ERROR_MESSAGES,
-  PROFILE_NAME_ERROR_MESSAGES,
-} from './profile_messages';
+import { PROFILE_NAME_ERROR_MESSAGES } from './profile_messages';
 import { ProfileEstimate } from './profile_estimate';
 
 interface ProfileFlyoutProps {
@@ -128,124 +122,6 @@ const INDEX_OPTIONS: ReadonlyArray<{
   },
 ];
 
-const BOOST_HINT = i18n.translate('xpack.boost.profileForm.boostHint', {
-  defaultMessage: '{min} to {max}',
-  values: { min: MIN_BOOST, max: MAX_BOOST.toLocaleString(i18n.getLocale()) },
-});
-
-const DAYS_UNIT = i18n.translate('xpack.boost.profileForm.daysUnit', { defaultMessage: 'days' });
-
-interface BoostRangeFieldsProps {
-  range: BoostRangeDraft;
-  onChange: (range: BoostRangeDraft) => void;
-  error?: BoostRangeError;
-  maxAge?: { days: string; onChange: (days: string) => void; error?: MaxAgeError };
-  disabled: boolean;
-  testSubjPrefix: string;
-}
-
-/** Minimum and maximum boost inputs, plus an optional max age input for data stream periods. */
-const BoostRangeFields = ({
-  range,
-  onChange,
-  error,
-  maxAge,
-  disabled,
-  testSubjPrefix,
-}: BoostRangeFieldsProps) => {
-  const errorMessage = error && BOOST_RANGE_ERROR_MESSAGES[error];
-  const minError = errorMessage?.field === 'min' ? errorMessage.message : undefined;
-  const maxError = errorMessage?.field === 'max' ? errorMessage.message : undefined;
-  const maxAgeError = maxAge?.error && MAX_AGE_ERROR_MESSAGES[maxAge.error];
-
-  return (
-    <EuiFlexGroup gutterSize="m">
-      <EuiFlexItem>
-        <EuiFormRow
-          display="rowCompressed"
-          label={i18n.translate('xpack.boost.profileForm.minBoostLabel', {
-            defaultMessage: 'Minimum boost',
-          })}
-          helpText={BOOST_HINT}
-          isInvalid={Boolean(minError)}
-          error={minError}
-        >
-          <EuiFieldNumber
-            compressed
-            value={range.minBoost}
-            onChange={({ target: { value } }) => onChange({ ...range, minBoost: value })}
-            min={MIN_BOOST}
-            max={MAX_BOOST}
-            step="any"
-            isInvalid={Boolean(minError)}
-            disabled={disabled}
-            data-test-subj={`${testSubjPrefix}MinBoost`}
-          />
-        </EuiFormRow>
-      </EuiFlexItem>
-      <EuiFlexItem>
-        <EuiFormRow
-          display="rowCompressed"
-          label={i18n.translate('xpack.boost.profileForm.maxBoostLabel', {
-            defaultMessage: 'Maximum boost',
-          })}
-          helpText={BOOST_HINT}
-          isInvalid={Boolean(maxError)}
-          error={maxError}
-        >
-          <EuiFieldNumber
-            compressed
-            value={range.maxBoost}
-            onChange={({ target: { value } }) => onChange({ ...range, maxBoost: value })}
-            min={MIN_BOOST}
-            max={MAX_BOOST}
-            step="any"
-            isInvalid={Boolean(maxError)}
-            disabled={disabled}
-            data-test-subj={`${testSubjPrefix}MaxBoost`}
-          />
-        </EuiFormRow>
-      </EuiFlexItem>
-      {maxAge && (
-        <EuiFlexItem>
-          <EuiFormRow
-            display="rowCompressed"
-            label={i18n.translate('xpack.boost.profileForm.maxAgeLabel', {
-              defaultMessage: 'Max age',
-            })}
-            isInvalid={Boolean(maxAgeError)}
-            error={maxAgeError}
-          >
-            <EuiFieldNumber
-              compressed
-              value={maxAge.days}
-              onChange={({ target: { value } }) => maxAge.onChange(value)}
-              min={1}
-              step={1}
-              append={DAYS_UNIT}
-              isInvalid={Boolean(maxAgeError)}
-              disabled={disabled}
-              data-test-subj={`${testSubjPrefix}MaxAge`}
-            />
-          </EuiFormRow>
-        </EuiFlexItem>
-      )}
-    </EuiFlexGroup>
-  );
-};
-
-const PeriodHeading = ({ title, description }: { title: string; description: string }) => (
-  <>
-    <EuiTitle size="xxs">
-      <h4>{title}</h4>
-    </EuiTitle>
-    <EuiText size="xs" color="subdued">
-      <p>{description}</p>
-    </EuiText>
-    <EuiSpacer size="s" />
-  </>
-);
-
 export const ProfileFlyout = ({
   profile,
   duplicateOf,
@@ -272,6 +148,11 @@ export const ProfileFlyout = ({
 
   const updateDraft = (changes: Partial<ProfileDraft>) => setDraft({ ...draft, ...changes });
   const { indices, dataStreams } = draft;
+  const { recent, standard, background } = dataStreams;
+  const updatePeriod = (period: 'recent' | 'standard', changes: Partial<AgedPeriodDraft>) =>
+    updateDraft({
+      dataStreams: { ...dataStreams, [period]: { ...dataStreams[period], ...changes } },
+    });
 
   const onSave = (createRule: boolean) => {
     if (hasDraftErrors(errors)) {
@@ -403,139 +284,109 @@ export const ProfileFlyout = ({
           />
         </FormSection>
 
-        {draft.type === 'indices' ? (
-          <>
-            <FormSection
-              title={i18n.translate('xpack.boost.profileForm.boostTitle', {
-                defaultMessage: 'Boost',
-              })}
-              description={i18n.translate('xpack.boost.profileForm.indicesBoostDescription', {
-                defaultMessage:
-                  'The default is 1. Higher values handle more queries; lower values cost less. Enter values from {min} to {max}.',
-                values: { min: MIN_BOOST, max: MAX_BOOST.toLocaleString(i18n.getLocale()) },
-              })}
-            >
-              <BoostRangeInputs
-                range={indices}
-                onChange={(range) => updateDraft({ indices: { ...indices, ...range } })}
-                error={visibleErrors.indicesRange}
-                disabled={isSaving}
-                testSubjPrefix="indices"
-              />
-            </FormSection>
-            <FormSection
-              title={i18n.translate('xpack.boost.profileForm.optionsTitle', {
-                defaultMessage: 'Additional options',
-              })}
-            >
-              <EuiFlexGroup direction="column" gutterSize="s">
-                {INDEX_OPTIONS.map(({ key, title, description }) => (
-                  <EuiFlexItem key={key}>
-                    <EuiCheckableCard
-                      id={`${optionsId}-${key}`}
-                      checkableType="checkbox"
-                      label={<CardLabel title={title} description={description} />}
-                      checked={indices[key]}
-                      onChange={() =>
-                        updateDraft({ indices: { ...indices, [key]: !indices[key] } })
-                      }
-                      disabled={isSaving}
-                      data-test-subj={`boostProfileOption-${key}`}
-                    />
-                  </EuiFlexItem>
-                ))}
-              </EuiFlexGroup>
-            </FormSection>
-          </>
-        ) : (
+        <FormSection
+          title={i18n.translate('xpack.boost.profileForm.boostTitle', {
+            defaultMessage: 'Boost',
+          })}
+          description={i18n.translate('xpack.boost.profileForm.boostDescription', {
+            defaultMessage:
+              'The default is 1. Higher values handle more queries; lower values cost less. Enter values from {min} to {max}.',
+            values: { min: MIN_BOOST, max: MAX_BOOST.toLocaleString(i18n.getLocale()) },
+          })}
+        >
+          {draft.type === 'indices' ? (
+            <BoostRangeInputs
+              range={indices}
+              onChange={(range) => updateDraft({ indices: { ...indices, ...range } })}
+              error={visibleErrors.indicesRange}
+              disabled={isSaving}
+              testSubjPrefix="indices"
+            />
+          ) : (
+            <>
+              <FormSubsection
+                title={i18n.translate('xpack.boost.profileForm.recentTitle', {
+                  defaultMessage: 'Recent',
+                })}
+              >
+                <BoostRangeInputs
+                  range={recent}
+                  onChange={(range) => updatePeriod('recent', range)}
+                  error={visibleErrors.recentRange}
+                  maxAge={{
+                    value: recent.maxAge,
+                    unit: recent.maxAgeUnit,
+                    onChange: (maxAge) => updatePeriod('recent', { maxAge }),
+                    onUnitChange: (maxAgeUnit) => updatePeriod('recent', { maxAgeUnit }),
+                    error: visibleErrors.recentMaxAge,
+                  }}
+                  disabled={isSaving}
+                  testSubjPrefix="recent"
+                />
+              </FormSubsection>
+              <EuiSpacer size="l" />
+              <FormSubsection
+                title={i18n.translate('xpack.boost.profileForm.standardTitle', {
+                  defaultMessage: 'Standard',
+                })}
+              >
+                <BoostRangeInputs
+                  range={standard}
+                  onChange={(range) => updatePeriod('standard', range)}
+                  error={visibleErrors.standardRange}
+                  maxAge={{
+                    value: standard.maxAge,
+                    unit: standard.maxAgeUnit,
+                    onChange: (maxAge) => updatePeriod('standard', { maxAge }),
+                    onUnitChange: (maxAgeUnit) => updatePeriod('standard', { maxAgeUnit }),
+                    error: visibleErrors.standardMaxAge,
+                  }}
+                  disabled={isSaving}
+                  testSubjPrefix="standard"
+                />
+              </FormSubsection>
+              <EuiSpacer size="l" />
+              <FormSubsection
+                title={i18n.translate('xpack.boost.profileForm.backgroundTitle', {
+                  defaultMessage: 'Background',
+                })}
+              >
+                <BoostRangeInputs
+                  range={background}
+                  onChange={(range) =>
+                    updateDraft({ dataStreams: { ...dataStreams, background: range } })
+                  }
+                  error={visibleErrors.backgroundRange}
+                  reserveMaxAgeColumn
+                  disabled={isSaving}
+                  testSubjPrefix="background"
+                />
+              </FormSubsection>
+            </>
+          )}
+        </FormSection>
+
+        {draft.type === 'indices' && (
           <FormSection
-            title={i18n.translate('xpack.boost.profileForm.boostTitle', {
-              defaultMessage: 'Boost',
-            })}
-            description={i18n.translate('xpack.boost.profileForm.boostDescription', {
-              defaultMessage:
-                'The default is 1. Higher values handle more queries; lower values cost less.',
+            title={i18n.translate('xpack.boost.profileForm.optionsTitle', {
+              defaultMessage: 'Additional options',
             })}
           >
-            <PeriodHeading
-              title={i18n.translate('xpack.boost.profileForm.recentTitle', {
-                defaultMessage: 'Recent',
-              })}
-              description={i18n.translate('xpack.boost.profileForm.recentDescription', {
-                defaultMessage: 'The newest data, which is usually searched most often.',
-              })}
-            />
-            <BoostRangeFields
-              range={dataStreams.recent}
-              onChange={(range) =>
-                updateDraft({
-                  dataStreams: { ...dataStreams, recent: { ...dataStreams.recent, ...range } },
-                })
-              }
-              error={visibleErrors.recentRange}
-              maxAge={{
-                days: dataStreams.recent.maxAgeDays,
-                onChange: (maxAgeDays) =>
-                  updateDraft({
-                    dataStreams: {
-                      ...dataStreams,
-                      recent: { ...dataStreams.recent, maxAgeDays },
-                    },
-                  }),
-                error: visibleErrors.recentMaxAge,
-              }}
-              disabled={isSaving}
-              testSubjPrefix="recent"
-            />
-            <EuiSpacer size="l" />
-            <PeriodHeading
-              title={i18n.translate('xpack.boost.profileForm.standardTitle', {
-                defaultMessage: 'Standard',
-              })}
-              description={i18n.translate('xpack.boost.profileForm.standardDescription', {
-                defaultMessage: 'Data older than the recent period, up to this max age.',
-              })}
-            />
-            <BoostRangeFields
-              range={dataStreams.standard}
-              onChange={(range) =>
-                updateDraft({
-                  dataStreams: { ...dataStreams, standard: { ...dataStreams.standard, ...range } },
-                })
-              }
-              error={visibleErrors.standardRange}
-              maxAge={{
-                days: dataStreams.standard.maxAgeDays,
-                onChange: (maxAgeDays) =>
-                  updateDraft({
-                    dataStreams: {
-                      ...dataStreams,
-                      standard: { ...dataStreams.standard, maxAgeDays },
-                    },
-                  }),
-                error: visibleErrors.standardMaxAge,
-              }}
-              disabled={isSaving}
-              testSubjPrefix="standard"
-            />
-            <EuiSpacer size="l" />
-            <PeriodHeading
-              title={i18n.translate('xpack.boost.profileForm.backgroundTitle', {
-                defaultMessage: 'Background',
-              })}
-              description={i18n.translate('xpack.boost.profileForm.backgroundDescription', {
-                defaultMessage: 'All data older than the standard period.',
-              })}
-            />
-            <BoostRangeFields
-              range={dataStreams.background}
-              onChange={(background) =>
-                updateDraft({ dataStreams: { ...dataStreams, background } })
-              }
-              error={visibleErrors.backgroundRange}
-              disabled={isSaving}
-              testSubjPrefix="background"
-            />
+            <EuiFlexGroup direction="column" gutterSize="s">
+              {INDEX_OPTIONS.map(({ key, title, description }) => (
+                <EuiFlexItem key={key}>
+                  <EuiCheckableCard
+                    id={`${optionsId}-${key}`}
+                    checkableType="checkbox"
+                    label={<CardLabel title={title} description={description} />}
+                    checked={indices[key]}
+                    onChange={() => updateDraft({ indices: { ...indices, [key]: !indices[key] } })}
+                    disabled={isSaving}
+                    data-test-subj={`boostProfileOption-${key}`}
+                  />
+                </EuiFlexItem>
+              ))}
+            </EuiFlexGroup>
           </FormSection>
         )}
       </EuiFlyoutBody>

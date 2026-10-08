@@ -7,9 +7,10 @@
 
 import {
   getBoostRangeError,
-  getMaxAgeDaysError,
+  formatMaxAge,
+  getMaxAgeError,
   getProfileNameError,
-  parseMaxAgeDays,
+  parseMaxAge,
 } from './validation';
 
 describe('getProfileNameError', () => {
@@ -52,23 +53,40 @@ describe('getBoostRangeError', () => {
   });
 });
 
-describe('getMaxAgeDaysError', () => {
-  it('requires a whole number of days of at least one', () => {
-    expect(getMaxAgeDaysError(undefined)).toBe('required');
-    expect(getMaxAgeDaysError(0)).toBe('out_of_range');
-    expect(getMaxAgeDaysError(1.5)).toBe('out_of_range');
+describe('getMaxAgeError', () => {
+  it('requires a whole number of at least one', () => {
+    expect(getMaxAgeError(undefined)).toBe('required');
+    expect(getMaxAgeError({ value: 0, unit: 'h' })).toBe('out_of_range');
+    expect(getMaxAgeError({ value: 1.5, unit: 'd' })).toBe('out_of_range');
   });
 
-  it('rejects a max age shorter than the previous period', () => {
-    expect(getMaxAgeDaysError(3, 7)).toBe('below_previous_period');
-    expect(getMaxAgeDaysError(7, 7)).toBeUndefined();
+  it('caps the max age at the same length in either unit', () => {
+    expect(getMaxAgeError({ value: 3650, unit: 'd' })).toBeUndefined();
+    expect(getMaxAgeError({ value: 3651, unit: 'd' })).toBe('out_of_range');
+    expect(getMaxAgeError({ value: 3650 * 24 + 1, unit: 'h' })).toBe('out_of_range');
+  });
+
+  it('rejects a max age shorter than the previous period, across units', () => {
+    expect(getMaxAgeError({ value: 3, unit: 'd' }, { value: 7, unit: 'd' })).toBe(
+      'below_previous_period'
+    );
+    expect(getMaxAgeError({ value: 12, unit: 'h' }, { value: 1, unit: 'd' })).toBe(
+      'below_previous_period'
+    );
+    expect(getMaxAgeError({ value: 24, unit: 'h' }, { value: 1, unit: 'd' })).toBeUndefined();
   });
 });
 
-describe('parseMaxAgeDays', () => {
-  it('parses day durations only', () => {
-    expect(parseMaxAgeDays('7d')).toBe(7);
-    expect(parseMaxAgeDays('12h')).toBeUndefined();
-    expect(parseMaxAgeDays(undefined)).toBeUndefined();
+describe('parseMaxAge', () => {
+  it('parses day and hour durations', () => {
+    expect(parseMaxAge('7d')).toEqual({ value: 7, unit: 'd' });
+    expect(parseMaxAge('12h')).toEqual({ value: 12, unit: 'h' });
+    expect(parseMaxAge('90m')).toBeUndefined();
+    expect(parseMaxAge(undefined)).toBeUndefined();
+  });
+
+  it('round-trips through formatMaxAge', () => {
+    expect(formatMaxAge({ value: 12, unit: 'h' })).toBe('12h');
+    expect(parseMaxAge(formatMaxAge({ value: 3, unit: 'd' }))).toEqual({ value: 3, unit: 'd' });
   });
 });

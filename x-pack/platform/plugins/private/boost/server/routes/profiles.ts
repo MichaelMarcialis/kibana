@@ -15,11 +15,12 @@ import {
 } from '../../common/constants';
 import type { BoostRangeError, MaxAgeError, ProfileNameError } from '../../common/validation';
 import {
+  MAX_AGE_MAX_DAYS,
   PROFILE_NAME_MAX_LENGTH,
   getBoostRangeError,
-  getMaxAgeDaysError,
+  getMaxAgeError,
   getProfileNameError,
-  parseMaxAgeDays,
+  parseMaxAge,
 } from '../../common/validation';
 import { createProfile, deleteProfile, getState, updateProfile } from '../lib/boost_store';
 import { toErrorResponse } from '../lib/errors';
@@ -43,8 +44,8 @@ const BOOST_RANGE_MESSAGES: Record<BoostRangeError, string> = {
 };
 
 const MAX_AGE_MESSAGES: Record<MaxAgeError, string> = {
-  required: 'max_age is required, in whole days (for example 7d)',
-  out_of_range: 'max_age must be a whole number of days of at least 1d',
+  required: 'max_age is required, in whole days or hours (for example 7d or 12h)',
+  out_of_range: `max_age must be a whole number of days or hours, from 1h up to ${MAX_AGE_MAX_DAYS}d`,
   below_previous_period: "max_age must not be shorter than the previous period's max_age",
 };
 
@@ -104,12 +105,12 @@ const dataStreamsProfileSchema = schema.object(
   },
   {
     validate: ({ recent, standard }) => {
-      const recentDays = parseMaxAgeDays(recent.max_age);
-      const recentError = getMaxAgeDaysError(recentDays);
+      const recentMaxAge = parseMaxAge(recent.max_age);
+      const recentError = getMaxAgeError(recentMaxAge);
       if (recentError) {
         return `[recent]: ${MAX_AGE_MESSAGES[recentError]}`;
       }
-      const standardError = getMaxAgeDaysError(parseMaxAgeDays(standard.max_age), recentDays);
+      const standardError = getMaxAgeError(parseMaxAge(standard.max_age), recentMaxAge);
       return standardError && `[standard]: ${MAX_AGE_MESSAGES[standardError]}`;
     },
   }

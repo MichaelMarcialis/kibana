@@ -12,13 +12,20 @@ import type {
   BoostProfileInput,
   BoostProfileType,
 } from '../../../common/types';
-import type { BoostRangeError, MaxAgeError, ProfileNameError } from '../../../common/validation';
+import type {
+  BoostRangeError,
+  MaxAge,
+  MaxAgeError,
+  MaxAgeUnit,
+  ProfileNameError,
+} from '../../../common/validation';
 import {
-  formatMaxAgeDays,
+  formatMaxAge,
   getBoostRangeError,
-  getMaxAgeDaysError,
+  getMaxAgeError,
   getProfileNameError,
-  parseMaxAgeDays,
+  parseMaxAge,
+  toMaxAgeHours,
 } from '../../../common/validation';
 import type { VcuRange } from '../../../common/vcu_estimate';
 import { estimateDataStreamsVcuRange, estimateIndicesVcuRange } from '../../../common/vcu_estimate';
@@ -31,7 +38,8 @@ export interface BoostRangeDraft {
 }
 
 export interface AgedPeriodDraft extends BoostRangeDraft {
-  maxAgeDays: string;
+  maxAge: string;
+  maxAgeUnit: MaxAgeUnit;
 }
 
 export interface ProfileDraft {
@@ -63,10 +71,15 @@ const rangeDraft = ({ min_boost: min, max_boost: max }: BoostPeriod): BoostRange
   maxBoost: toText(max),
 });
 
-const agedPeriodDraft = (period: BoostPeriod): AgedPeriodDraft => ({
-  ...rangeDraft(period),
-  maxAgeDays: toText(parseMaxAgeDays(period.max_age)),
-});
+const agedPeriodDraft = (period: BoostPeriod): AgedPeriodDraft => {
+  const maxAge = parseMaxAge(period.max_age);
+  return { ...rangeDraft(period), maxAge: toText(maxAge?.value), maxAgeUnit: maxAge?.unit ?? 'd' };
+};
+
+const toMaxAge = ({ maxAge, maxAgeUnit }: AgedPeriodDraft): MaxAge | undefined => {
+  const value = parseNumber(maxAge);
+  return value === undefined ? undefined : { value, unit: maxAgeUnit };
+};
 
 const ELASTIC_NAME_PREFIX = 'elastic-';
 
@@ -97,8 +110,8 @@ export const createEmptyDraft = (): ProfileDraft => ({
     pinned: false,
   },
   dataStreams: {
-    recent: { minBoost: '1', maxBoost: String(MAX_BOOST), maxAgeDays: '1' },
-    standard: { minBoost: '1', maxBoost: String(MAX_BOOST), maxAgeDays: '7' },
+    recent: { minBoost: '1', maxBoost: String(MAX_BOOST), maxAge: '1', maxAgeUnit: 'd' },
+    standard: { minBoost: '1', maxBoost: String(MAX_BOOST), maxAge: '7', maxAgeUnit: 'd' },
     background: { minBoost: '1', maxBoost: String(MAX_BOOST) },
   },
 });
@@ -139,13 +152,13 @@ const getValueErrors = (draft: ProfileDraft): ValueErrors => {
   }
 
   const { recent, standard, background } = draft.dataStreams;
-  const recentDays = parseNumber(recent.maxAgeDays);
+  const recentMaxAge = toMaxAge(recent);
 
   return {
     recentRange: getRangeError(recent),
-    recentMaxAge: getMaxAgeDaysError(recentDays),
+    recentMaxAge: getMaxAgeError(recentMaxAge),
     standardRange: getRangeError(standard),
-    standardMaxAge: getMaxAgeDaysError(parseNumber(standard.maxAgeDays), recentDays),
+    standardMaxAge: getMaxAgeError(toMaxAge(standard), recentMaxAge),
     backgroundRange: getRangeError(background),
   };
 };
@@ -167,6 +180,10 @@ const toRange = ({ minBoost, maxBoost }: BoostRangeDraft) => ({
   maxBoost: Number(maxBoost),
 });
 
+// Only called once the draft's max ages are valid.
+const toMaxAgeDays = ({ maxAge, maxAgeUnit }: AgedPeriodDraft): number =>
+  toMaxAgeHours({ value: Number(maxAge), unit: maxAgeUnit }) / 24;
+
 /** Estimates the draft's search VCU range, or returns `undefined` while its values are invalid. */
 export const getDraftEstimate = (draft: ProfileDraft): VcuRange | undefined => {
   if (hasDraftErrors(getValueErrors(draft))) {
@@ -180,8 +197,8 @@ export const getDraftEstimate = (draft: ProfileDraft): VcuRange | undefined => {
 
   const { recent, standard, background } = draft.dataStreams;
   return estimateDataStreamsVcuRange({
-    recent: { ...toRange(recent), maxAgeDays: Number(recent.maxAgeDays) },
-    standard: { ...toRange(standard), maxAgeDays: Number(standard.maxAgeDays) },
+    recent: { ...toRange(recent), maxAgeDays: toMaxAgeDays(recent) },
+    standard: { ...toRange(standard), maxAgeDays: toMaxAgeDays(standard) },
     background: toRange(background),
   });
 };
@@ -190,6 +207,9 @@ const toPeriod = ({ minBoost, maxBoost }: BoostRangeDraft): BoostPeriod => ({
   min_boost: Number(minBoost),
   max_boost: Number(maxBoost),
 });
+
+const formatAgedPeriodMaxAge = ({ maxAge, maxAgeUnit }: AgedPeriodDraft): string =>
+  formatMaxAge({ value: Number(maxAge), unit: maxAgeUnit });
 
 /** Converts a draft that passed validation into an API payload. */
 export const draftToProfileInput = (draft: ProfileDraft): BoostProfileInput => {
@@ -209,8 +229,8 @@ export const draftToProfileInput = (draft: ProfileDraft): BoostProfileInput => {
   return {
     type: 'data_streams',
     name: draft.name,
-    recent: { ...toPeriod(recent), max_age: formatMaxAgeDays(Number(recent.maxAgeDays)) },
-    standard: { ...toPeriod(standard), max_age: formatMaxAgeDays(Number(standard.maxAgeDays)) },
+    recent: { ...toPeriod(recent), max_age: formatAgedPeriodMaxAge(recent) },
+    standard: { ...toPeriod(standard), max_age: formatAgedPeriodMaxAge(standard) },
     background: toPeriod(background),
   };
 };

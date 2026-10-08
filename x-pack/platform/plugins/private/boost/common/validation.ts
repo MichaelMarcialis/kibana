@@ -25,6 +25,17 @@ export type BoostRangeError =
 
 export type MaxAgeError = 'required' | 'out_of_range' | 'below_previous_period';
 
+/** Units a period's max age can use, matching the Elasticsearch time unit suffixes. */
+export type MaxAgeUnit = 'd' | 'h';
+
+export interface MaxAge {
+  value: number;
+  unit: MaxAgeUnit;
+}
+
+const HOURS_PER_UNIT: Readonly<Record<MaxAgeUnit, number>> = { d: 24, h: 1 };
+const MAX_AGE_MAX_HOURS = MAX_AGE_MAX_DAYS * HOURS_PER_UNIT.d;
+
 // Lowercase letters, numbers, hyphens and underscores; must not start with a hyphen or underscore.
 const PROFILE_NAME_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
 
@@ -68,26 +79,40 @@ export const getBoostRangeError = (
   return maxBoost < minBoost ? 'max_below_min' : undefined;
 };
 
-/** Validates a period's max age in whole days, which must not be shorter than the period before it. */
-export const getMaxAgeDaysError = (
-  days: number | undefined,
-  previousPeriodDays?: number
+/** Converts a max age to hours, so ages in different units can be compared. */
+export const toMaxAgeHours = ({ value, unit }: MaxAge): number => value * HOURS_PER_UNIT[unit];
+
+/**
+ * Validates a period's max age: a whole number of days or hours, up to the maximum, that isn't
+ * shorter than the period before it.
+ */
+export const getMaxAgeError = (
+  maxAge: MaxAge | undefined,
+  previousPeriod?: MaxAge
 ): MaxAgeError | undefined => {
-  if (days === undefined) {
+  if (maxAge === undefined) {
     return 'required';
   }
-  if (!Number.isInteger(days) || days < 1 || days > MAX_AGE_MAX_DAYS) {
+  if (
+    !Number.isInteger(maxAge.value) ||
+    maxAge.value < 1 ||
+    toMaxAgeHours(maxAge) > MAX_AGE_MAX_HOURS
+  ) {
     return 'out_of_range';
   }
-  return previousPeriodDays !== undefined && days < previousPeriodDays
+  return previousPeriod !== undefined && toMaxAgeHours(maxAge) < toMaxAgeHours(previousPeriod)
     ? 'below_previous_period'
     : undefined;
 };
 
-/** Parses a max age such as `7d` into whole days, or `undefined` if it isn't in days. */
-export const parseMaxAgeDays = (maxAge: string | undefined): number | undefined => {
-  const match = maxAge?.match(/^(\d+)d$/);
-  return match ? Number(match[1]) : undefined;
+/** Parses a max age such as `7d` or `12h`, or returns `undefined` for other formats. */
+export const parseMaxAge = (maxAge: string | undefined): MaxAge | undefined => {
+  const match = maxAge?.match(/^(\d+)([dh])$/);
+  if (!match) {
+    return undefined;
+  }
+  const [, value, unit] = match;
+  return { value: Number(value), unit: unit === 'h' ? 'h' : 'd' };
 };
 
-export const formatMaxAgeDays = (days: number): string => `${days}d`;
+export const formatMaxAge = ({ value, unit }: MaxAge): string => `${value}${unit}`;

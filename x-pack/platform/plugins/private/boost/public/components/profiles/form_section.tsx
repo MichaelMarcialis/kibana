@@ -55,3 +55,40 @@ export const FormSection = ({
     </>
   );
 };
+
+interface FormSubsectionProps {
+  title: string;
+  description?: string;
+  children: ReactNode;
+  'data-test-subj'?: string;
+}
+
+/** A smaller titled group of fields within a form section. */
+export const FormSubsection = ({
+  title,
+  description,
+  children,
+  'data-test-subj': dataTestSubj,
+}: FormSubsectionProps) => {
+  const titleId = useGeneratedHtmlId({ prefix: 'formSubsectionTitle' });
+  const descriptionId = useGeneratedHtmlId({ prefix: 'formSubsectionDescription' });
+
+  return (
+    <EuiFormFieldset
+      aria-labelledby={titleId}
+      aria-describedby={description ? descriptionId : undefined}
+      data-test-subj={dataTestSubj}
+    >
+      <EuiTitle size="xxs">
+        <h4 id={titleId}>{title}</h4>
+      </EuiTitle>
+      {description && (
+        <EuiText id={descriptionId} size="xs" color="subdued">
+          <p>{description}</p>
+        </EuiText>
+      )}
+      <EuiSpacer size="s" />
+      {children}
+    </EuiFormFieldset>
+  );
+};

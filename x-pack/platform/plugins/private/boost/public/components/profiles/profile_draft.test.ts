@@ -54,6 +54,16 @@ describe('profile drafts', () => {
     expect(hasDraftErrors(getDraftErrors(draft, []))).toBe(false);
   });
 
+  it('keeps hour-based max ages when round-tripping', () => {
+    const profile: BoostProfile = {
+      ...dataStreamsProfile,
+      recent: { ...dataStreamsProfile.recent, max_age: '12h' },
+    };
+    const { is_builtin: _isBuiltin, ...input } = profile;
+
+    expect(draftToProfileInput(draftFromProfile(profile))).toEqual(input);
+  });
+
   it('flags a standard window shorter than the recent window', () => {
     const draft = draftFromProfile({
       ...dataStreamsProfile,
@@ -82,7 +92,7 @@ describe('getDraftEstimate', () => {
 
   it('has no estimate while a value is invalid', () => {
     const draft = draftFromProfile(dataStreamsProfile);
-    draft.dataStreams.recent.maxAgeDays = '';
+    draft.dataStreams.recent.maxAge = '';
 
     expect(getDraftEstimate(draft)).toBeUndefined();
   });
