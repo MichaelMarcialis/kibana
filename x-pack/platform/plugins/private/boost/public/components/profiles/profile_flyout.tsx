@@ -33,6 +33,9 @@ import { useCreateProfile, useUpdateProfile } from '../../hooks/use_boost_state'
 import { CardLabel } from '../card_label';
 import { PresetCards } from '../preset_cards';
 import type { PresetOption } from '../preset_options';
+import { BoostRangeInputs } from './boost_range_inputs';
+import { FormSection } from './form_section';
+import { FullWidthDivider } from './full_width_divider';
 import type { BoostRangeDraft, ProfileDraft } from './profile_draft';
 import {
   createEmptyDraft,
@@ -40,6 +43,7 @@ import {
   getCopyName,
   draftToProfileInput,
   getDraftErrors,
+  getDraftEstimate,
   hasDraftErrors,
 } from './profile_draft';
 import {
@@ -47,6 +51,7 @@ import {
   MAX_AGE_ERROR_MESSAGES,
   PROFILE_NAME_ERROR_MESSAGES,
 } from './profile_messages';
+import { ProfileEstimate } from './profile_estimate';
 
 interface ProfileFlyoutProps {
   /** The custom profile to edit. */
@@ -382,14 +387,11 @@ export const ProfileFlyout = ({
           />
         </EuiFormRow>
 
-        <EuiFormRow
-          display="rowCompressed"
-          labelType="legend"
-          label={i18n.translate('xpack.boost.profileForm.typeLabel', { defaultMessage: 'Type' })}
-          helpText={i18n.translate('xpack.boost.profileForm.typeHelp', {
+        <FormSection
+          title={i18n.translate('xpack.boost.profileForm.typeTitle', { defaultMessage: 'Type' })}
+          description={i18n.translate('xpack.boost.profileForm.typeDescription', {
             defaultMessage: "The type can't be changed after the profile is created.",
           })}
-          fullWidth
         >
           <PresetCards
             name="boostProfileType"
@@ -397,42 +399,34 @@ export const ProfileFlyout = ({
             selectedId={draft.type}
             onChange={(type) => updateDraft({ type })}
             disabled={isEditing || isSaving}
+            direction="row"
           />
-        </EuiFormRow>
-
-        <EuiSpacer size="l" />
-        <EuiTitle size="xs">
-          <h3>
-            {i18n.translate('xpack.boost.profileForm.boostTitle', { defaultMessage: 'Boost' })}
-          </h3>
-        </EuiTitle>
-        <EuiText size="xs" color="subdued">
-          <p>
-            {i18n.translate('xpack.boost.profileForm.boostDescription', {
-              defaultMessage:
-                'Boost 1 is the default experience. Higher values keep more resources ready for query throughput; lower values reduce resources and cost.',
-            })}
-          </p>
-        </EuiText>
-        <EuiSpacer size="m" />
+        </FormSection>
 
         {draft.type === 'indices' ? (
           <>
-            <BoostRangeFields
-              range={indices}
-              onChange={(range) => updateDraft({ indices: { ...indices, ...range } })}
-              error={visibleErrors.indicesRange}
-              disabled={isSaving}
-              testSubjPrefix="indices"
-            />
-            <EuiSpacer size="l" />
-            <EuiFormRow
-              display="rowCompressed"
-              labelType="legend"
-              label={i18n.translate('xpack.boost.profileForm.optionsLabel', {
+            <FormSection
+              title={i18n.translate('xpack.boost.profileForm.boostTitle', {
+                defaultMessage: 'Boost',
+              })}
+              description={i18n.translate('xpack.boost.profileForm.indicesBoostDescription', {
+                defaultMessage:
+                  'Boost 1 is the default experience. Higher values keep more resources ready for query throughput; lower values reduce resources and cost. Enter values from {min} to {max}.',
+                values: { min: MIN_BOOST, max: MAX_BOOST.toLocaleString(i18n.getLocale()) },
+              })}
+            >
+              <BoostRangeInputs
+                range={indices}
+                onChange={(range) => updateDraft({ indices: { ...indices, ...range } })}
+                error={visibleErrors.indicesRange}
+                disabled={isSaving}
+                testSubjPrefix="indices"
+              />
+            </FormSection>
+            <FormSection
+              title={i18n.translate('xpack.boost.profileForm.optionsTitle', {
                 defaultMessage: 'Additional options',
               })}
-              fullWidth
             >
               <EuiFlexGroup direction="column" gutterSize="s">
                 {INDEX_OPTIONS.map(({ key, title, description }) => (
@@ -451,10 +445,18 @@ export const ProfileFlyout = ({
                   </EuiFlexItem>
                 ))}
               </EuiFlexGroup>
-            </EuiFormRow>
+            </FormSection>
           </>
         ) : (
-          <>
+          <FormSection
+            title={i18n.translate('xpack.boost.profileForm.boostTitle', {
+              defaultMessage: 'Boost',
+            })}
+            description={i18n.translate('xpack.boost.profileForm.boostDescription', {
+              defaultMessage:
+                'Boost 1 is the default experience. Higher values keep more resources ready for query throughput; lower values reduce resources and cost.',
+            })}
+          >
             <PeriodHeading
               title={i18n.translate('xpack.boost.profileForm.recentTitle', {
                 defaultMessage: 'Recent',
@@ -534,11 +536,16 @@ export const ProfileFlyout = ({
               disabled={isSaving}
               testSubjPrefix="background"
             />
-          </>
+          </FormSection>
         )}
       </EuiFlyoutBody>
 
       <EuiFlyoutFooter>
+        <ProfileEstimate
+          estimate={getDraftEstimate(draft)}
+          savedEstimate={profile && getDraftEstimate(draftFromProfile(profile))}
+        />
+        <FullWidthDivider margin="s" />
         <EuiFlexGroup justifyContent="spaceBetween" responsive={false}>
           <EuiFlexItem grow={false}>
             <EuiButtonEmpty

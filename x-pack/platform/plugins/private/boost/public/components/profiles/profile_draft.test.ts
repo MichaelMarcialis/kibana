@@ -13,6 +13,7 @@ import {
   draftToProfileInput,
   getCopyName,
   getDraftErrors,
+  getDraftEstimate,
   hasDraftErrors,
 } from './profile_draft';
 
@@ -61,6 +62,29 @@ describe('profile drafts', () => {
     });
 
     expect(getDraftErrors(draft, []).standardMaxAge).toBe('below_previous_period');
+  });
+});
+
+describe('getDraftEstimate', () => {
+  it('estimates profiles of both types, ignoring the name', () => {
+    expect(getDraftEstimate(createEmptyDraft())).toBeDefined();
+    expect(getDraftEstimate(draftFromProfile(dataStreamsProfile))).toBeDefined();
+  });
+
+  it('reflects the additional index options', () => {
+    const draft = createEmptyDraft();
+    const extraCopy = { ...draft, indices: { ...draft.indices, extraCopy: true } };
+
+    expect(getDraftEstimate(extraCopy)?.atPeak).toBeGreaterThan(
+      getDraftEstimate(draft)?.atPeak ?? Infinity
+    );
+  });
+
+  it('has no estimate while a value is invalid', () => {
+    const draft = draftFromProfile(dataStreamsProfile);
+    draft.dataStreams.recent.maxAgeDays = '';
+
+    expect(getDraftEstimate(draft)).toBeUndefined();
   });
 });
 

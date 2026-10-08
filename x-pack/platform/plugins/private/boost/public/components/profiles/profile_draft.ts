@@ -20,6 +20,8 @@ import {
   getProfileNameError,
   parseMaxAgeDays,
 } from '../../../common/validation';
+import type { VcuRange } from '../../../common/vcu_estimate';
+import { estimateDataStreamsVcuRange, estimateIndicesVcuRange } from '../../../common/vcu_estimate';
 
 // Form fields hold strings so inputs can be empty or mid-edit; they're parsed on validation.
 
@@ -129,22 +131,17 @@ export const draftFromProfile = (profile: BoostProfile): ProfileDraft => {
 const getRangeError = ({ minBoost, maxBoost }: BoostRangeDraft) =>
   getBoostRangeError(parseNumber(minBoost), parseNumber(maxBoost));
 
-/** Returns only the errors that apply to the draft's profile type. */
-export const getDraftErrors = (
-  draft: ProfileDraft,
-  takenNames: readonly string[]
-): ProfileDraftErrors => {
-  const name = getProfileNameError(draft.name, takenNames);
+type ValueErrors = Omit<ProfileDraftErrors, 'name'>;
 
+const getValueErrors = (draft: ProfileDraft): ValueErrors => {
   if (draft.type === 'indices') {
-    return { name, indicesRange: getRangeError(draft.indices) };
+    return { indicesRange: getRangeError(draft.indices) };
   }
 
   const { recent, standard, background } = draft.dataStreams;
   const recentDays = parseNumber(recent.maxAgeDays);
 
   return {
-    name,
     recentRange: getRangeError(recent),
     recentMaxAge: getMaxAgeDaysError(recentDays),
     standardRange: getRangeError(standard),
@@ -153,8 +150,41 @@ export const getDraftErrors = (
   };
 };
 
+/** Returns only the errors that apply to the draft's profile type. */
+export const getDraftErrors = (
+  draft: ProfileDraft,
+  takenNames: readonly string[]
+): ProfileDraftErrors => ({
+  name: getProfileNameError(draft.name, takenNames),
+  ...getValueErrors(draft),
+});
+
 export const hasDraftErrors = (errors: ProfileDraftErrors): boolean =>
   Object.values(errors).some((error) => error !== undefined);
+
+const toRange = ({ minBoost, maxBoost }: BoostRangeDraft) => ({
+  minBoost: Number(minBoost),
+  maxBoost: Number(maxBoost),
+});
+
+/** Estimates the draft's search VCU range, or returns `undefined` while its values are invalid. */
+export const getDraftEstimate = (draft: ProfileDraft): VcuRange | undefined => {
+  if (hasDraftErrors(getValueErrors(draft))) {
+    return undefined;
+  }
+
+  if (draft.type === 'indices') {
+    const { extraCopy, prewarm, pinned } = draft.indices;
+    return estimateIndicesVcuRange({ ...toRange(draft.indices), extraCopy, prewarm, pinned });
+  }
+
+  const { recent, standard, background } = draft.dataStreams;
+  return estimateDataStreamsVcuRange({
+    recent: { ...toRange(recent), maxAgeDays: Number(recent.maxAgeDays) },
+    standard: { ...toRange(standard), maxAgeDays: Number(standard.maxAgeDays) },
+    background: toRange(background),
+  });
+};
 
 const toPeriod = ({ minBoost, maxBoost }: BoostRangeDraft): BoostPeriod => ({
   min_boost: Number(minBoost),

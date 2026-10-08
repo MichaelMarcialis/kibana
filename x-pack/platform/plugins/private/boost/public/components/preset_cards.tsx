@@ -6,6 +6,7 @@
  */
 
 import React from 'react';
+import { css } from '@emotion/react';
 import {
   EuiBadge,
   EuiCheckableCard,
@@ -25,11 +26,16 @@ interface PresetCardsProps<TId extends string> {
   selectedId: TId;
   onChange: (id: TId) => void;
   disabled: boolean;
+  /** Stacks the cards by default; `row` places them side by side at equal heights. */
+  direction?: 'column' | 'row';
 }
 
 const DEFAULT_BADGE_LABEL = i18n.translate('xpack.boost.presets.defaultBadge', {
   defaultMessage: 'Default',
 });
+
+// Cards fill their flex item so side-by-side cards share the tallest card's height.
+const fillItemCss = css({ flexGrow: 1 });
 
 /** Radio group of preset cards, one per option. */
 export const PresetCards = <TId extends string>({
@@ -39,11 +45,12 @@ export const PresetCards = <TId extends string>({
   selectedId,
   onChange,
   disabled,
+  direction = 'column',
 }: PresetCardsProps<TId>) => {
   const groupId = useGeneratedHtmlId({ prefix: name });
 
   const cards = (
-    <EuiFlexGroup direction="column" gutterSize="s" data-test-subj={`${name}PresetCards`}>
+    <EuiFlexGroup direction={direction} gutterSize="s" data-test-subj={`${name}PresetCards`}>
       {options.map(({ id, label, description, isDefault }) => (
         <EuiFlexItem key={id}>
           <EuiCheckableCard
@@ -59,6 +66,7 @@ export const PresetCards = <TId extends string>({
             checked={selectedId === id}
             onChange={() => onChange(id)}
             disabled={disabled}
+            css={direction === 'row' ? fillItemCss : undefined}
             data-test-subj={`${name}Preset-${id}`}
           />
         </EuiFlexItem>
