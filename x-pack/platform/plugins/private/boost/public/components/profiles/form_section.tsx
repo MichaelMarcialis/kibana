@@ -44,7 +44,7 @@ export const FormSection = ({
         {description && (
           <>
             <EuiSpacer size="xs" />
-            <EuiText id={descriptionId} size="s" color="subdued">
+            <EuiText id={descriptionId} size="xs" color="subdued">
               <p>{description}</p>
             </EuiText>
           </>

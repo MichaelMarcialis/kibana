@@ -35,7 +35,7 @@ export const BoostRangeInputs = ({
   const maxError = errorMessage?.field === 'max' ? errorMessage.message : undefined;
 
   return (
-    <EuiFlexGroup gutterSize="m" responsive={false}>
+    <EuiFlexGroup gutterSize="s" responsive={false}>
       <EuiFlexItem>
         <EuiFormRow
           display="rowCompressed"

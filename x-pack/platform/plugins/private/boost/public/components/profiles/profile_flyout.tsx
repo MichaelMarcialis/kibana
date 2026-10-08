@@ -411,7 +411,7 @@ export const ProfileFlyout = ({
               })}
               description={i18n.translate('xpack.boost.profileForm.indicesBoostDescription', {
                 defaultMessage:
-                  'Boost 1 is the default experience. Higher values keep more resources ready for query throughput; lower values reduce resources and cost. Enter values from {min} to {max}.',
+                  'The default is 1. Higher values handle more queries; lower values cost less. Enter values from {min} to {max}.',
                 values: { min: MIN_BOOST, max: MAX_BOOST.toLocaleString(i18n.getLocale()) },
               })}
             >
@@ -454,7 +454,7 @@ export const ProfileFlyout = ({
             })}
             description={i18n.translate('xpack.boost.profileForm.boostDescription', {
               defaultMessage:
-                'Boost 1 is the default experience. Higher values keep more resources ready for query throughput; lower values reduce resources and cost.',
+                'The default is 1. Higher values handle more queries; lower values cost less.',
             })}
           >
             <PeriodHeading
