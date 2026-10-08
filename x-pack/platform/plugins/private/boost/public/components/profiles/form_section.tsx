@@ -7,7 +7,14 @@
 
 import type { ReactNode } from 'react';
 import React from 'react';
-import { EuiFormFieldset, EuiSpacer, EuiText, EuiTitle, useGeneratedHtmlId } from '@elastic/eui';
+import {
+  EuiFormFieldset,
+  EuiPanel,
+  EuiSpacer,
+  EuiText,
+  EuiTitle,
+  useGeneratedHtmlId,
+} from '@elastic/eui';
 import { FullWidthDivider } from './full_width_divider';
 
 interface FormSectionProps {
@@ -63,7 +70,7 @@ interface FormSubsectionProps {
   'data-test-subj'?: string;
 }
 
-/** A smaller titled group of fields within a form section. */
+/** A smaller titled group of fields within a form section, in a bordered panel. */
 export const FormSubsection = ({
   title,
   description,
@@ -74,21 +81,23 @@ export const FormSubsection = ({
   const descriptionId = useGeneratedHtmlId({ prefix: 'formSubsectionDescription' });
 
   return (
-    <EuiFormFieldset
-      aria-labelledby={titleId}
-      aria-describedby={description ? descriptionId : undefined}
-      data-test-subj={dataTestSubj}
-    >
-      <EuiTitle size="xxs">
-        <h4 id={titleId}>{title}</h4>
-      </EuiTitle>
-      {description && (
-        <EuiText id={descriptionId} size="xs" color="subdued">
-          <p>{description}</p>
-        </EuiText>
-      )}
-      <EuiSpacer size="s" />
-      {children}
-    </EuiFormFieldset>
+    <EuiPanel hasBorder hasShadow={false} paddingSize="m">
+      <EuiFormFieldset
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
+        data-test-subj={dataTestSubj}
+      >
+        <EuiTitle size="xxs">
+          <h4 id={titleId}>{title}</h4>
+        </EuiTitle>
+        {description && (
+          <EuiText id={descriptionId} size="xs" color="subdued">
+            <p>{description}</p>
+          </EuiText>
+        )}
+        <EuiSpacer size="s" />
+        {children}
+      </EuiFormFieldset>
+    </EuiPanel>
   );
 };

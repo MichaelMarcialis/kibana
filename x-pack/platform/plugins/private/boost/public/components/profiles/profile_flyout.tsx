@@ -324,7 +324,7 @@ export const ProfileFlyout = ({
                   testSubjPrefix="recent"
                 />
               </FormSubsection>
-              <EuiSpacer size="l" />
+              <EuiSpacer size="s" />
               <FormSubsection
                 title={i18n.translate('xpack.boost.profileForm.standardTitle', {
                   defaultMessage: 'Standard',
@@ -345,7 +345,7 @@ export const ProfileFlyout = ({
                   testSubjPrefix="standard"
                 />
               </FormSubsection>
-              <EuiSpacer size="l" />
+              <EuiSpacer size="s" />
               <FormSubsection
                 title={i18n.translate('xpack.boost.profileForm.backgroundTitle', {
                   defaultMessage: 'Background',
