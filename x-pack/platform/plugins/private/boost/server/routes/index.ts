@@ -8,13 +8,16 @@
 import { schema } from '@kbn/config-schema';
 import type { IRouter } from '@kbn/core/server';
 import {
+  BOOST_DEFAULT_RULES_API_PATH,
   BOOST_MODE_API_PATH,
   BOOST_SIMPLE_DEFAULTS_API_PATH,
   BOOST_STATE_API_PATH,
   MANAGE_BOOST_PRIVILEGE,
   READ_BOOST_PRIVILEGE,
 } from '../../common/constants';
-import { getState, updateMode, updateSimpleDefaults } from '../lib/boost_store';
+import { PROFILE_NAME_MAX_LENGTH } from '../../common/validation';
+import { getState, updateDefaultRule, updateMode, updateSimpleDefaults } from '../lib/boost_store';
+import { toErrorResponse } from '../lib/errors';
 import { getRequestClients } from './request_clients';
 import { registerProfileRoutes } from './profiles';
 import { registerPrototypeRoutes } from './prototype';
@@ -36,6 +39,14 @@ const simpleDefaultsSchema = schema.object({
 
 const modeSchema = schema.object({
   mode: schema.oneOf([schema.literal('simple'), schema.literal('advanced')]),
+});
+
+const defaultRuleParamsSchema = schema.object({
+  type: schema.oneOf([schema.literal('indices'), schema.literal('data_streams')]),
+});
+
+const defaultRuleBodySchema = schema.object({
+  boost_profile: schema.string({ minLength: 1, maxLength: PROFILE_NAME_MAX_LENGTH }),
 });
 
 export const registerRoutes = (router: IRouter) => {
@@ -73,6 +84,23 @@ export const registerRoutes = (router: IRouter) => {
     async (context, { body: { mode } }, response) => {
       const { savedObjectsClient, esClient } = await getRequestClients(context);
       await updateMode(savedObjectsClient, mode);
+      return response.ok({ body: await getState(savedObjectsClient, esClient) });
+    }
+  );
+
+  router.put(
+    {
+      path: `${BOOST_DEFAULT_RULES_API_PATH}/{type}`,
+      security: { authz: { requiredPrivileges: [MANAGE_BOOST_PRIVILEGE] } },
+      validate: { params: defaultRuleParamsSchema, body: defaultRuleBodySchema },
+    },
+    async (context, { params: { type }, body: { boost_profile: profileName } }, response) => {
+      const { savedObjectsClient, esClient } = await getRequestClients(context);
+      try {
+        await updateDefaultRule(savedObjectsClient, type, profileName);
+      } catch (error) {
+        return toErrorResponse(response, error);
+      }
       return response.ok({ body: await getState(savedObjectsClient, esClient) });
     }
   );

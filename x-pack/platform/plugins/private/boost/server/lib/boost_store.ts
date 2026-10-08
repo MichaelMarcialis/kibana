@@ -10,23 +10,31 @@ import { SavedObjectsErrorHelpers } from '@kbn/core/server';
 import { BOOST_SAVED_OBJECT_TYPE, BOOST_SETTINGS_SAVED_OBJECT_ID } from '../../common/constants';
 import {
   BUILTIN_PROFILES,
+  DEFAULT_DATA_STREAMS_RULE_NAME,
+  DEFAULT_INDICES_RULE_NAME,
   DEFAULT_SIMPLE_MODE_DEFAULTS,
+  NO_CUSTOM_DEFAULTS,
   createDefaultRules,
   getEffectiveDefaults,
+  setDefaultRuleProfile,
 } from '../../common/presets';
 import type {
   BoostMode,
   BoostProfile,
   BoostProfileInput,
+  BoostProfileType,
   BoostSettings,
   BoostState,
+  CustomDefaults,
   SimpleModeDefaults,
 } from '../../common/types';
 import { getDataSources } from './data_sources';
 import { BoostRequestError } from './errors';
 
-type SettingsAttributes = Pick<BoostSettings, 'mode' | 'simple' | 'advanced'> & {
+type SettingsAttributes = Pick<BoostSettings, 'mode' | 'simple'> & {
   kind: 'settings';
+  /** Missing from settings saved before custom defaults existed. */
+  custom_defaults?: CustomDefaults;
 };
 
 type ProfileAttributes = BoostProfileInput & { kind: 'profile' };
@@ -41,20 +49,20 @@ const BUILTIN_PROFILE_NAMES = BUILTIN_PROFILES.map(({ name }) => name);
 const DEFAULT_SETTINGS: BoostSettings = {
   mode: 'simple',
   simple: DEFAULT_SIMPLE_MODE_DEFAULTS,
-  advanced: null,
+  custom_defaults: NO_CUSTOM_DEFAULTS,
 };
 
 const getSettings = async (client: SavedObjectsClientContract): Promise<BoostSettings> => {
   try {
     const {
-      attributes: { mode, simple, advanced },
+      attributes: { mode, simple, custom_defaults: customDefaults = NO_CUSTOM_DEFAULTS },
       updated_at: updatedAt,
     } = await client.get<SettingsAttributes>(
       BOOST_SAVED_OBJECT_TYPE,
       BOOST_SETTINGS_SAVED_OBJECT_ID
     );
 
-    return { mode, simple, advanced, updated_at: updatedAt };
+    return { mode, simple, custom_defaults: customDefaults, updated_at: updatedAt };
   } catch (error) {
     if (SavedObjectsErrorHelpers.isNotFoundError(error)) {
       return DEFAULT_SETTINGS;
@@ -65,9 +73,14 @@ const getSettings = async (client: SavedObjectsClientContract): Promise<BoostSet
 
 const saveSettings = async (
   client: SavedObjectsClientContract,
-  { mode, simple, advanced }: BoostSettings
+  { mode, simple, custom_defaults: customDefaults }: BoostSettings
 ): Promise<void> => {
-  const attributes: SettingsAttributes = { kind: 'settings', mode, simple, advanced };
+  const attributes: SettingsAttributes = {
+    kind: 'settings',
+    mode,
+    simple,
+    custom_defaults: customDefaults,
+  };
 
   await client.create(BOOST_SAVED_OBJECT_TYPE, attributes, {
     id: BOOST_SETTINGS_SAVED_OBJECT_ID,
@@ -179,6 +192,21 @@ export const deleteProfile = async (
 ): Promise<void> => {
   assertNotBuiltin(name, 'deleted');
   await getCustomProfile(client, name);
+
+  const { custom_defaults: customDefaults } = await getSettings(client);
+  const ruleName =
+    customDefaults.indices_profile === name
+      ? DEFAULT_INDICES_RULE_NAME
+      : customDefaults.data_streams_profile === name
+      ? DEFAULT_DATA_STREAMS_RULE_NAME
+      : undefined;
+  if (ruleName) {
+    throw new BoostRequestError(
+      409,
+      `Boost profile [${name}] is used by boost rule [${ruleName}].`
+    );
+  }
+
   await client.delete(BOOST_SAVED_OBJECT_TYPE, profileId(name));
 };
 
@@ -187,6 +215,22 @@ export const updateSimpleDefaults = async (
   simple: SimpleModeDefaults
 ): Promise<void> => {
   await saveSettings(client, { ...(await getSettings(client)), simple });
+};
+
+/** Points the default rule for a profile type at an Elastic-managed or custom profile of that type. */
+export const updateDefaultRule = async (
+  client: SavedObjectsClientContract,
+  type: BoostProfileType,
+  profileName: string
+): Promise<void> => {
+  const profile =
+    BUILTIN_PROFILES.find(({ name }) => name === profileName) ??
+    (await getCustomProfile(client, profileName));
+  if (profile.type !== type) {
+    throw new BoostRequestError(400, `Boost profile [${profileName}] is not a ${type} profile.`);
+  }
+
+  await saveSettings(client, setDefaultRuleProfile(await getSettings(client), type, profileName));
 };
 
 export const updateMode = async (

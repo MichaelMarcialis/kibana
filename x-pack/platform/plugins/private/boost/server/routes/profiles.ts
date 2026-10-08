@@ -6,7 +6,7 @@
  */
 
 import { schema } from '@kbn/config-schema';
-import type { IKibanaResponse, IRouter, KibanaResponseFactory } from '@kbn/core/server';
+import type { IRouter } from '@kbn/core/server';
 import {
   BOOST_PROFILES_API_PATH,
   MANAGE_BOOST_PRIVILEGE,
@@ -22,7 +22,7 @@ import {
   parseMaxAgeDays,
 } from '../../common/validation';
 import { createProfile, deleteProfile, getState, updateProfile } from '../lib/boost_store';
-import { BoostRequestError } from '../lib/errors';
+import { toErrorResponse } from '../lib/errors';
 import { getRequestClients } from './request_clients';
 
 const PROFILE_NAME_MESSAGES: Record<ProfileNameError, string> = {
@@ -120,13 +120,6 @@ const profileSchema = schema.oneOf([indicesProfileSchema, dataStreamsProfileSche
 const profileNameParamsSchema = schema.object({
   name: schema.string({ maxLength: PROFILE_NAME_MAX_LENGTH }),
 });
-
-const toErrorResponse = (response: KibanaResponseFactory, error: Error): IKibanaResponse => {
-  if (error instanceof BoostRequestError) {
-    return response.customError({ statusCode: error.statusCode, body: { message: error.message } });
-  }
-  throw error;
-};
 
 export const registerProfileRoutes = (router: IRouter) => {
   router.post(

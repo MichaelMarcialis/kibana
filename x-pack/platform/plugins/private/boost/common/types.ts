@@ -66,17 +66,26 @@ export interface SimpleModeDefaults {
   };
 }
 
-/** Profiles referenced by the two default rules while in advanced mode. */
-export interface AdvancedModeDefaults {
+/** Profiles referenced by the two default rules. */
+export interface DefaultRuleProfiles {
   indices_profile: string;
   data_streams_profile: string;
+}
+
+/**
+ * Custom profiles that the default rules use in advanced mode, or `null` while a default rule uses
+ * an Elastic-managed profile. Simple mode and advanced mode stay in sync for each type until that
+ * type's default rule uses a custom profile.
+ */
+export interface CustomDefaults {
+  indices_profile: string | null;
+  data_streams_profile: string | null;
 }
 
 export interface BoostSettings {
   mode: BoostMode;
   simple: SimpleModeDefaults;
-  /** `null` until the user changes a default rule in advanced mode. */
-  advanced: AdvancedModeDefaults | null;
+  custom_defaults: CustomDefaults;
   updated_at?: string;
 }
 

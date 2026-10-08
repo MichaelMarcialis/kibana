@@ -7,12 +7,14 @@
 
 import { MAX_BOOST } from './constants';
 import type {
-  AdvancedModeDefaults,
   BoostPeriod,
   BoostProfile,
+  BoostProfileType,
   BoostRule,
   BoostSettings,
+  CustomDefaults,
   DataStreamsBoostProfile,
+  DefaultRuleProfiles,
   DataStreamsWindowId,
   IndicesPresetId,
   SimpleModeDefaults,
@@ -36,6 +38,11 @@ export const DEFAULT_DATA_STREAMS_RULE_NAME = 'elastic-default-data-streams';
 export const DEFAULT_SIMPLE_MODE_DEFAULTS: SimpleModeDefaults = {
   indices: 'performant',
   data_streams: { window: 'last_7_days' },
+};
+
+export const NO_CUSTOM_DEFAULTS: CustomDefaults = {
+  indices_profile: null,
+  data_streams_profile: null,
 };
 
 const createWindowPeriods = (
@@ -108,7 +115,7 @@ export const BUILTIN_PROFILES: readonly BoostProfile[] = [
 export const translateSimpleDefaults = ({
   indices,
   data_streams: dataStreams,
-}: SimpleModeDefaults): AdvancedModeDefaults => ({
+}: SimpleModeDefaults): DefaultRuleProfiles => ({
   indices_profile: BUILTIN_INDICES_PROFILE_NAMES[indices],
   data_streams_profile: BUILTIN_DATA_STREAMS_PROFILE_NAMES[dataStreams.window],
 });
@@ -117,14 +124,58 @@ export const translateSimpleDefaults = ({
 export const getEffectiveDefaults = ({
   mode,
   simple,
-  advanced,
-}: BoostSettings): AdvancedModeDefaults =>
-  mode === 'advanced' && advanced ? advanced : translateSimpleDefaults(simple);
+  custom_defaults: customDefaults,
+}: BoostSettings): DefaultRuleProfiles => {
+  const synced = translateSimpleDefaults(simple);
+  if (mode === 'simple') {
+    return synced;
+  }
+
+  return {
+    indices_profile: customDefaults.indices_profile ?? synced.indices_profile,
+    data_streams_profile: customDefaults.data_streams_profile ?? synced.data_streams_profile,
+  };
+};
+
+const findPresetId = <TId extends string>(
+  profileNames: Readonly<Record<TId, string>>,
+  profileName: string
+): TId | undefined =>
+  (Object.keys(profileNames) as TId[]).find((id) => profileNames[id] === profileName);
+
+/**
+ * Points a default rule at a profile. An Elastic-managed profile selects the matching simple-mode
+ * option, keeping both modes in sync; a custom profile stops syncing that type until a managed
+ * profile is chosen again.
+ */
+export const setDefaultRuleProfile = (
+  settings: BoostSettings,
+  type: BoostProfileType,
+  profileName: string
+): BoostSettings => {
+  const { simple, custom_defaults: customDefaults } = settings;
+
+  if (type === 'indices') {
+    const preset = findPresetId(BUILTIN_INDICES_PROFILE_NAMES, profileName);
+    return {
+      ...settings,
+      simple: preset ? { ...simple, indices: preset } : simple,
+      custom_defaults: { ...customDefaults, indices_profile: preset ? null : profileName },
+    };
+  }
+
+  const window = findPresetId(BUILTIN_DATA_STREAMS_PROFILE_NAMES, profileName);
+  return {
+    ...settings,
+    simple: window ? { ...simple, data_streams: { window } } : simple,
+    custom_defaults: { ...customDefaults, data_streams_profile: window ? null : profileName },
+  };
+};
 
 export const createDefaultRules = ({
   indices_profile: indicesProfile,
   data_streams_profile: dataStreamsProfile,
-}: AdvancedModeDefaults): BoostRule[] => [
+}: DefaultRuleProfiles): BoostRule[] => [
   {
     name: DEFAULT_INDICES_RULE_NAME,
     index_pattern: '*',

@@ -21,7 +21,12 @@ import {
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
 import { countDataSourcesByProfile, countRulesByProfile } from '../../../common/resolution';
-import type { BoostDataSource, BoostProfile, BoostRule } from '../../../common/types';
+import type {
+  BoostDataSource,
+  BoostProfile,
+  BoostProfileType,
+  BoostRule,
+} from '../../../common/types';
 import { useBoostServices } from '../../hooks/use_boost_services';
 import { useDeleteProfile } from '../../hooks/use_boost_state';
 import { PROFILE_TYPE_LABELS, formatBoost } from '../format';
@@ -40,6 +45,7 @@ type ProfileRow = BoostProfile & {
   ruleCount: number;
   minBoost: number;
   maxBoost: number;
+  usedByDefaultRule: boolean;
 };
 
 type FlyoutState = { profile?: BoostProfile; duplicateOf?: BoostProfile } | undefined;
@@ -52,6 +58,19 @@ const MANAGED_BADGE_LABEL = i18n.translate('xpack.boost.profilesTab.managedBadge
 
 const isCustomProfile = ({ is_builtin: isBuiltin }: BoostProfile) => !isBuiltin;
 
+const DELETE_DESCRIPTION = i18n.translate('xpack.boost.profilesTab.deleteActionDescription', {
+  defaultMessage: 'Delete this boost profile',
+});
+
+const USED_BY_DEFAULT_RULE_DESCRIPTIONS: Record<BoostProfileType, string> = {
+  indices: i18n.translate('xpack.boost.profilesTab.usedByDefaultIndicesRule', {
+    defaultMessage: "The default rule for indices uses this profile, so it can't be deleted.",
+  }),
+  data_streams: i18n.translate('xpack.boost.profilesTab.usedByDefaultDataStreamsRule', {
+    defaultMessage: "The default rule for data streams uses this profile, so it can't be deleted.",
+  }),
+};
+
 export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesTabProps) => {
   const { notifications } = useBoostServices();
   const deleteModalTitleId = useGeneratedHtmlId();
@@ -62,6 +81,11 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
   const rows = useMemo<ProfileRow[]>(() => {
     const dataSourceCounts = countDataSourcesByProfile(dataSources, rules, profiles);
     const ruleCounts = countRulesByProfile(rules);
+    const defaultRuleProfiles = new Set(
+      rules
+        .filter(({ is_builtin: isBuiltin }) => isBuiltin)
+        .map(({ boost_profile: profileName }) => profileName)
+    );
     return profiles.map((profile) => {
       const { min_boost: minBoost, max_boost: maxBoost } =
         profile.type === 'indices' ? profile : profile.recent;
@@ -71,6 +95,7 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
         ruleCount: ruleCounts.get(profile.name) ?? 0,
         minBoost,
         maxBoost,
+        usedByDefaultRule: defaultRuleProfiles.has(profile.name),
       };
     });
   }, [profiles, rules, dataSources]);
@@ -113,13 +138,13 @@ export const ProfilesTab = ({ profiles, rules, dataSources, canEdit }: ProfilesT
       },
       {
         name: i18n.translate('xpack.boost.profilesTab.deleteAction', { defaultMessage: 'Delete' }),
-        description: i18n.translate('xpack.boost.profilesTab.deleteActionDescription', {
-          defaultMessage: 'Delete this boost profile',
-        }),
+        description: ({ type, usedByDefaultRule }) =>
+          usedByDefaultRule ? USED_BY_DEFAULT_RULE_DESCRIPTIONS[type] : DELETE_DESCRIPTION,
         icon: 'trash',
         color: 'danger',
         type: 'icon',
         available: isCustomProfile,
+        enabled: ({ usedByDefaultRule }) => !usedByDefaultRule,
         onClick: setProfileToDelete,
         'data-test-subj': 'deleteBoostProfile',
       },
