@@ -20,6 +20,8 @@ import { FullWidthDivider } from './full_width_divider';
 interface FormSectionProps {
   title: string;
   description?: string;
+  /** Omit the divider for a section with nothing above it. */
+  hasDivider?: boolean;
   children: ReactNode;
   'data-test-subj'?: string;
 }
@@ -31,6 +33,7 @@ interface FormSectionProps {
 export const FormSection = ({
   title,
   description,
+  hasDivider = true,
   children,
   'data-test-subj': dataTestSubj,
 }: FormSectionProps) => {
@@ -39,7 +42,7 @@ export const FormSection = ({
 
   return (
     <>
-      <FullWidthDivider margin="m" />
+      {hasDivider && <FullWidthDivider margin="m" />}
       <EuiFormFieldset
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}

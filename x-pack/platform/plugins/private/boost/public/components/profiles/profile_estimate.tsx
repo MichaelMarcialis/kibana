@@ -11,8 +11,8 @@ import {
   EuiFlexGroup,
   EuiFlexItem,
   EuiIconTip,
-  EuiScreenReaderOnly,
   EuiText,
+  EuiToolTip,
   useEuiTheme,
 } from '@elastic/eui';
 import { i18n } from '@kbn/i18n';
@@ -49,11 +49,21 @@ interface ChangeBadgeProps {
   savedVcus: number;
 }
 
-/** How much a value moved from the saved profile: up (more VCUs) or down (fewer VCUs). */
+/** Whether a value moved up (more VCUs) or down (fewer VCUs) from the saved profile. */
 const ChangeBadge = ({ vcus, savedVcus }: ChangeBadgeProps) => {
   const isHigher = vcus > savedVcus;
-  const delta = formatVcus(roundVcus(Math.abs(vcus - savedVcus)));
+  const deltaVcus = roundVcus(Math.abs(vcus - savedVcus));
+  const delta = formatVcus(deltaVcus);
   const savedValue = formatVcus(savedVcus);
+  const difference = isHigher
+    ? i18n.translate('xpack.boost.profileEstimate.increase', {
+        defaultMessage: '+{delta} {count, plural, one {VCU} other {VCUs}}',
+        values: { delta, count: deltaVcus },
+      })
+    : i18n.translate('xpack.boost.profileEstimate.decrease', {
+        defaultMessage: '−{delta} {count, plural, one {VCU} other {VCUs}}',
+        values: { delta, count: deltaVcus },
+      });
   const description = isHigher
     ? i18n.translate('xpack.boost.profileEstimate.higherThanSaved', {
         defaultMessage: 'Up {delta} from {savedValue}',
@@ -64,17 +74,18 @@ const ChangeBadge = ({ vcus, savedVcus }: ChangeBadgeProps) => {
         values: { delta, savedValue },
       });
 
+  // Icon only, to keep the row short. The tooltip shows the difference at a glance, and the
+  // accessible name adds the saved value for context.
   return (
-    <EuiBadge
-      color={isHigher ? 'danger' : 'success'}
-      iconType={isHigher ? 'sortUp' : 'sortDown'}
-      title={description}
-    >
-      <span aria-hidden={true}>{delta}</span>
-      <EuiScreenReaderOnly>
-        <span>{description}</span>
-      </EuiScreenReaderOnly>
-    </EuiBadge>
+    <EuiToolTip content={difference} display="flex" disableScreenReaderOutput>
+      <EuiBadge
+        color={isHigher ? 'danger' : 'success'}
+        iconType={isHigher ? 'sortUp' : 'sortDown'}
+        role="img"
+        aria-label={description}
+        tabIndex={0}
+      />
+    </EuiToolTip>
   );
 };
 
@@ -157,7 +168,7 @@ export const ProfileEstimate = ({ estimate, savedEstimate }: ProfileEstimateProp
       <EuiFlexItem grow={false}>
         <div aria-live="polite">
           {estimate ? (
-            <EuiFlexGroup gutterSize="m" alignItems="center" responsive={false} wrap>
+            <EuiFlexGroup gutterSize="s" alignItems="center" responsive={false} wrap>
               <EuiFlexItem grow={false}>
                 <EstimateValue end="atRest" estimate={estimate} savedEstimate={savedEstimate} />
               </EuiFlexItem>

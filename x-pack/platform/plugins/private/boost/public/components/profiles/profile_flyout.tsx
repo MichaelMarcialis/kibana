@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import {
+  EuiBadge,
   EuiButton,
   EuiButtonEmpty,
   EuiCheckableCard,
@@ -29,6 +30,7 @@ import type { BoostProfile, BoostProfileType } from '../../../common/types';
 import { useBoostServices } from '../../hooks/use_boost_services';
 import { useCreateProfile, useUpdateProfile } from '../../hooks/use_boost_state';
 import { CardLabel } from '../card_label';
+import { PROFILE_TYPE_LABELS } from '../format';
 import { PresetCards } from '../preset_cards';
 import type { PresetOption } from '../preset_options';
 import { BoostRangeInputs } from './boost_range_inputs';
@@ -227,7 +229,8 @@ export const ProfileFlyout = ({
           <h2 id={titleId}>
             {isEditing
               ? i18n.translate('xpack.boost.profileForm.editTitle', {
-                  defaultMessage: 'Edit boost profile',
+                  defaultMessage: "Edit ''{profileName}'' boost profile",
+                  values: { profileName: draft.name },
                 })
               : duplicateOf
               ? i18n.translate('xpack.boost.profileForm.duplicateTitle', {
@@ -238,53 +241,66 @@ export const ProfileFlyout = ({
                 })}
           </h2>
         </EuiTitle>
+        {/* The name and type can't change after creation, so editing shows them read-only here. */}
+        {isEditing && (
+          <>
+            <EuiSpacer size="s" />
+            <EuiBadge color="hollow" data-test-subj="boostProfileType">
+              {PROFILE_TYPE_LABELS[draft.type]}
+            </EuiBadge>
+          </>
+        )}
       </EuiFlyoutHeader>
 
       <EuiFlyoutBody>
-        <EuiFormRow
-          display="rowCompressed"
-          label={i18n.translate('xpack.boost.profileForm.nameLabel', { defaultMessage: 'Name' })}
-          helpText={
-            isEditing
-              ? i18n.translate('xpack.boost.profileForm.nameLockedHelp', {
-                  defaultMessage: "Profile names can't be changed.",
-                })
-              : i18n.translate('xpack.boost.profileForm.nameHelp', {
-                  defaultMessage: 'Lowercase letters, numbers, hyphens, and underscores.',
-                })
-          }
-          isInvalid={Boolean(nameError)}
-          error={nameError}
-          fullWidth
-        >
-          <EuiFieldText
-            compressed
-            value={draft.name}
-            onChange={({ target: { value } }) => updateDraft({ name: value })}
-            isInvalid={Boolean(nameError)}
-            disabled={isEditing || isSaving}
-            fullWidth
-            data-test-subj="boostProfileName"
-          />
-        </EuiFormRow>
+        {!isEditing && (
+          <>
+            <EuiFormRow
+              display="rowCompressed"
+              label={i18n.translate('xpack.boost.profileForm.nameLabel', {
+                defaultMessage: 'Name',
+              })}
+              helpText={i18n.translate('xpack.boost.profileForm.nameHelp', {
+                defaultMessage: 'Lowercase letters, numbers, hyphens, and underscores.',
+              })}
+              isInvalid={Boolean(nameError)}
+              error={nameError}
+              fullWidth
+            >
+              <EuiFieldText
+                compressed
+                value={draft.name}
+                onChange={({ target: { value } }) => updateDraft({ name: value })}
+                isInvalid={Boolean(nameError)}
+                disabled={isSaving}
+                fullWidth
+                data-test-subj="boostProfileName"
+              />
+            </EuiFormRow>
+
+            <FormSection
+              title={i18n.translate('xpack.boost.profileForm.typeTitle', {
+                defaultMessage: 'Type',
+              })}
+              description={i18n.translate('xpack.boost.profileForm.typeDescription', {
+                defaultMessage: "The type can't be changed after the profile is created.",
+              })}
+            >
+              <PresetCards
+                name="boostProfileType"
+                options={TYPE_OPTIONS}
+                selectedId={draft.type}
+                onChange={(type) => updateDraft({ type })}
+                disabled={isSaving}
+                direction="row"
+              />
+            </FormSection>
+          </>
+        )}
 
         <FormSection
-          title={i18n.translate('xpack.boost.profileForm.typeTitle', { defaultMessage: 'Type' })}
-          description={i18n.translate('xpack.boost.profileForm.typeDescription', {
-            defaultMessage: "The type can't be changed after the profile is created.",
-          })}
-        >
-          <PresetCards
-            name="boostProfileType"
-            options={TYPE_OPTIONS}
-            selectedId={draft.type}
-            onChange={(type) => updateDraft({ type })}
-            disabled={isEditing || isSaving}
-            direction="row"
-          />
-        </FormSection>
-
-        <FormSection
+          // When editing, Boost comes first, right under the header's own border.
+          hasDivider={!isEditing}
           title={i18n.translate('xpack.boost.profileForm.boostTitle', {
             defaultMessage: 'Boost',
           })}
